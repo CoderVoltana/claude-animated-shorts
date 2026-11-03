@@ -10,6 +10,10 @@ import numpy as np
 
 import timeline as TL
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "simtheory-style"))
+import simtheory_style as S  # noqa: E402
+from render import NEBULA_C  # noqa: E402
+
 W, H = 1440, 2560
 mp4 = sys.argv[1]
 here = os.path.dirname(os.path.abspath(__file__))
@@ -49,11 +53,14 @@ def get(fi):
 f0, fl = get(0), get(TL.NFRAMES - 1)
 print(f"loop: first vs last frame mean |diff| = {np.abs(f0 - fl).mean():.3f} / 255 (one frame of field drift)")
 
-# safe area: anything brighter than a faint glow outside the box?
+print("colour tags (kit check_export):", S.check_export(mp4))
+
+# safe area: anything brighter than a faint glow outside the box? (kit nebula backdrop subtracted)
+bg = S.Frame(w=W, h=H, nebula_center=NEBULA_C).finish().astype(np.int16)
 worst = 0
 for im in frames("not(mod(n\\,30))"):
-    im = im.max(axis=2)
+    im = np.clip(im.astype(np.int16) - bg, 0, 255).max(axis=2)
     out = np.concatenate([im[:384].ravel(), im[1664:].ravel(), im[:, 1152:].ravel()])
     worst = max(worst, int(out.max()))
-print(f"safe area: brightest pixel outside the central safe box over 60 sampled frames = {worst}/255 "
+print(f"safe area: brightest pixel outside the central safe box over 60 sampled frames (above backdrop) = {worst}/255 "
       f"-> {'PASS' if worst < 60 else 'CHECK'}")

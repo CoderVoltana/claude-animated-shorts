@@ -276,7 +276,7 @@ def build():
     for _ in range(4):
         lu = integrated_lufs(mix)
         mix *= 10 ** ((-14.0 - lu) / 20)
-        mix, gmin = limiter(mix, ceil_db=-1.4)
+        mix, gmin = limiter(mix, ceil_db=-1.7)   # kit EXPORT true_peak -1.5 dBTP
     lu = integrated_lufs(mix)
     tp = true_peak_db(mix)
     return mix, lu, tp, gmin, events
