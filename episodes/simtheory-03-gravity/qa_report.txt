@@ -1,0 +1,6 @@
+video: h264 High L51 1440x2560 60/1 fps yuv420p 14.2 Mb/s, 1800 frames, 30.000 s
+audio: aac 48000 Hz 2 ch 315 kb/s, 30.000 s
+file: 54.5 MB, duration 30.000 s
+loudness (ffmpeg ebur128, decoded AAC): integrated -14.1 LUFS, true peak -1.3 dBTP -> PASS
+loop: first vs last frame mean |diff| = 0.268 / 255 (one frame of field drift)
+safe area: brightest pixel outside the central safe box over 60 sampled frames = 38/255 -> PASS
