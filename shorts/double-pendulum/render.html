@@ -239,6 +239,9 @@ function orb(x, y, r, col, a) {
 function drawSwarm(t, cam, alpha, energy) {
   if (alpha <= 0.002) return;
   const tt = tau(t);
+  // once the ensemble fills the disc, hundreds of paths overlap near the pivot:
+  // thin them out so the core keeps its web detail instead of clipping to white
+  const ck = sstep(0.5, 2.5, spreadAt(tt).env);
   applyCam(ctx, cam);
   const px = 1 / cam.s;
   const per = N / NB;
@@ -261,7 +264,7 @@ function drawSwarm(t, cam, alpha, energy) {
         ctx.moveTo(P[2 * j0], P[2 * j0 + 1]);
         for (let j = j0 + 1; j <= j1; j++) ctx.lineTo(P[2 * j], P[2 * j + 1]);
       }
-      ctx.strokeStyle = rgba(BUCKET_COL[b], alpha * 0.30 * u * u);
+      ctx.strokeStyle = rgba(BUCKET_COL[b], alpha * 0.30 * (1 - 0.2 * ck) * u * u);
       ctx.stroke();
     }
   }
@@ -270,12 +273,12 @@ function drawSwarm(t, cam, alpha, energy) {
   for (let b = 0; b < NB; b++) {
     ctx.beginPath();
     for (let i = b * per; i < (b + 1) * per; i++) { ctx.moveTo(0, 0); ctx.lineTo(J[4 * i], J[4 * i + 1]); ctx.lineTo(J[4 * i + 2], J[4 * i + 3]); }
-    ctx.strokeStyle = rgba(BUCKET_COL[b], alpha * 0.16);
+    ctx.strokeStyle = rgba(BUCKET_COL[b], alpha * 0.16 * (1 - 0.45 * ck));
     ctx.stroke();
   }
   // bobs
   for (let b = 0; b < NB; b++) {
-    ctx.fillStyle = rgba(BUCKET_COL[b], alpha * 0.75);
+    ctx.fillStyle = rgba(BUCKET_COL[b], alpha * 0.75 * (1 - 0.2 * ck));
     ctx.beginPath();
     for (let i = b * per; i < (b + 1) * per; i++) {
       ctx.moveTo(J[4 * i + 2] + 3.2 * px, J[4 * i + 3]); ctx.arc(J[4 * i + 2], J[4 * i + 3], 3.2 * px, 0, 6.2832);
@@ -425,9 +428,13 @@ function drawGraph(t) {
   const a = sstep(9.4, 10.0, t) * (1 - sstep(18.0, 18.7, t));
   if (a <= 0.003) return;
   const tt = tau(t);
+  // exit: slide down + shrink as the metric saturates
+  const ex = sstep(17.9, 18.7, t);
+  const gcx = (GR.x0 + GR.x1) / 2, gcy = (GR.y0 + GR.y1) / 2;
   const gx = tv => lerp(GR.x0, GR.x1, tv / GR.tMax);
   const gy = d => lerp(GR.y1, GR.y0, (Math.log10(Math.max(d, 1e-9)) - GR.lo) / (GR.hi - GR.lo));
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.translate(gcx, gcy + 60 * ex * ex); ctx.scale(1 - 0.08 * ex, 1 - 0.08 * ex); ctx.translate(-gcx, -gcy);
   ctx.globalCompositeOperation = "source-over";
   ctx.fillStyle = `rgba(3,6,18,${0.6 * a})`;
   ctx.fillRect(GR.x0 - 100, GR.y0 - 112, GR.x1 - GR.x0 + 116, GR.y1 - GR.y0 + 150);
@@ -473,6 +480,14 @@ function drawGraph(t) {
   ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14;
   ctx.fillText(fmtDeg(dNow), GR.x1, GR.y0 - 26);
   ctx.shadowBlur = 0;
+  // ceiling reached: the members now point every which way
+  const sat = sstep(300, 340, dNow);
+  if (sat > 0) {
+    ctx.font = "700 22px 'JetBrains Mono'"; ctx.textAlign = "right"; ctx.letterSpacing = "3px";
+    ctx.fillStyle = `rgba(255,150,40,${a * sat * (0.65 + 0.35 * Math.sin(t * 18))})`;
+    ctx.fillText("SATURATED", GR.x1 - 4, GR.y0 - 80);
+    ctx.letterSpacing = "0px";
+  }
 }
 
 // ---------- text ----------
@@ -595,7 +610,7 @@ function renderFrame(n) {
     ctx.strokeStyle = `rgba(255,150,40,${ga * 0.7})`;
     ctx.beginPath(); ctx.arc(cam.x, cam.y, R * 0.82, 0, 6.2832); ctx.stroke();
   }
-  bloom(1 + 0.1 * energy);
+  bloom((1 + 0.1 * energy) * (1 - 0.15 * sstep(0.5, 2.5, env)));
   if (dk > -0.02 && dk < 0.6) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = "lighter";
