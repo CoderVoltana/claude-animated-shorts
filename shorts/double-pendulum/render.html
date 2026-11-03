@@ -1,0 +1,633 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Double Pendulum Chaos</title>
+<style>
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+// ---------------------------------------------------------------------------
+// Double Pendulum Chaos: deterministic frame renderer (1080x1920, 60 fps).
+// renderFrame(n) draws frame n from the precomputed physics in sim.bin.
+// Every frame is a pure function of n, so frames can render in parallel.
+// ---------------------------------------------------------------------------
+const W = 1080, H = 1920, FPS = 60;
+const T_END = 24.0;          // video length (s)
+const T_REWIND = 22.2;       // physics runs forward until here, then rewinds to t=0
+const T_REVEAL = 17.0;
+const L1 = 1.0, L2 = 1.0;    // must match sim.py
+
+let META, REPA, DA, N, S, RATE, SPREAD;   // REPA: Float64 [S][2] reference member, DA: Float32 [S][2][N] offsets
+
+const cv = document.getElementById("c");
+const ctx = cv.getContext("2d");
+const mk = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+const B1 = mk(540, 960), B2 = mk(270, 480), B3 = mk(135, 240);
+const b1 = B1.getContext("2d"), b2 = B2.getContext("2d"), b3 = B3.getContext("2d");
+
+// ---------- math helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const s5 = t => { t = clamp(t); return t * t * t * (t * (t * 6 - 15) + 10); };
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const easeOutBack = t => { t = clamp(t); const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+function hash(n) { n = (n ^ 61) ^ (n >>> 16); n = n + (n << 3); n = n ^ (n >>> 4); n = Math.imul(n, 0x27d4eb2d); n = n ^ (n >>> 15); return (n >>> 0) / 4294967296; }
+
+// ---------- palette: cyan -> blue -> purple -> orange ----------
+const STOPS = [[0, [0, 240, 255]], [0.34, [40, 120, 255]], [0.64, [168, 72, 255]], [0.82, [255, 72, 190]], [1, [255, 150, 30]]];
+function pal(u) {
+  u = clamp(u);
+  for (let k = 1; k < STOPS.length; k++) {
+    if (u <= STOPS[k][0]) {
+      const [a, ca] = STOPS[k - 1], [b, cb] = STOPS[k], t = (u - a) / (b - a);
+      return [0, 1, 2].map(i => Math.round(lerp(ca[i], cb[i], t)));
+    }
+  }
+  return STOPS[STOPS.length - 1][1];
+}
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const NB = 100;                       // colour buckets (pendulums per bucket = N/NB)
+const BUCKET_COL = Array.from({ length: NB }, (_, b) => pal(b / (NB - 1)));
+
+// ---------- time mapping: video time t -> physics time tau ----------
+function tau(t) {
+  if (t <= 0) return 0;
+  if (t <= T_REWIND) return t;
+  const u = (t - T_REWIND) / (T_END - T_REWIND);
+  return T_REWIND * (1 - s5(u));
+}
+
+// ---------- physics lookup ----------
+function angles(i, tt) {               // linear interpolation of the 240 Hz samples
+  let x = tt * RATE; if (x < 0) x = 0; if (x > S - 1.001) x = S - 1.001;
+  const k = x | 0, f = x - k, o0 = k * 2 * N, o1 = o0 + 2 * N, r0 = 2 * k, r1 = r0 + 2;
+  // reference angles in float64 plus tiny per-member offsets: keeps the 1e-9 degree differences exact
+  const a = REPA[r0] * (1 - f) + REPA[r1] * f + (DA[o0 + i] * (1 - f) + DA[o1 + i] * f);
+  const b = REPA[r0 + 1] * (1 - f) + REPA[r1 + 1] * f + (DA[o0 + N + i] * (1 - f) + DA[o1 + N + i] * f);
+  return [a, b];
+}
+function joints(i, tt) {               // world metres, y down, pivot at origin
+  const [a, b] = angles(i, tt);
+  const x1 = L1 * Math.sin(a), y1 = L1 * Math.cos(a);
+  return [x1, y1, x1 + L2 * Math.sin(b), y1 + L2 * Math.cos(b), a, b];
+}
+function spreadAt(tt) {                // precomputed spread envelope (60 Hz)
+  const x = clamp(tt * 60, 0, SPREAD.env.length - 1.001), k = x | 0, f = x - k;
+  return { env: lerp(SPREAD.env[k], SPREAD.env[k + 1], f), deg: lerp(SPREAD.deg[k], SPREAD.deg[k + 1], f) };
+}
+
+// ---------- camera ----------
+// keys: t, scale (px per metre), pivot screen x/y, roll (deg)
+const CAM = [
+  { t: 0.0, s: 272, x: 540, y: 1010, r: 0 },
+  { t: 2.0, s: 250, x: 540, y: 985, r: -1.5 },
+  { t: 6.0, s: 232, x: 540, y: 965, r: 0.8 },
+  { t: 16.4, s: 250, x: 540, y: 960, r: -1.2 },
+  { t: 17.0, s: 240, x: 540, y: 965, r: 0 },
+  { t: 19.2, s: 212, x: 540, y: 975, r: 3.5 },
+  { t: 22.2, s: 220, x: 540, y: 970, r: 1.8 },
+];
+function camAt(t) {
+  if (t >= T_REWIND) {            // glide back to the opening framing in step with the rewind
+    const a = CAM[CAM.length - 1], b = CAM[0], u = s5((t - T_REWIND) / (T_END - T_REWIND));
+    return { s: lerp(a.s, b.s, u), x: lerp(a.x, b.x, u), y: lerp(a.y, b.y, u), r: lerp(a.r, b.r, u) };
+  }
+  let k = 0; while (k < CAM.length - 2 && t > CAM[k + 1].t) k++;
+  const a = CAM[k], b = CAM[k + 1], u = k === 4 ? easeOut((t - a.t) / (b.t - a.t)) : s5((t - a.t) / (b.t - a.t));
+  const c = { s: lerp(a.s, b.s, u), x: lerp(a.x, b.x, u), y: lerp(a.y, b.y, u), r: lerp(a.r, b.r, u) };
+  // impact kick at the reveal: sign-flipping, decaying shake
+  const dk = t - T_REVEAL;
+  if (dk >= 0 && dk < 0.35) { const amp = 14 * Math.exp(-dk / 0.09); c.x += amp * (Math.round(dk * FPS) % 2 ? 1 : -1); c.y += amp * 0.6 * (Math.round(dk * FPS) % 2 ? -1 : 1); }
+  return c;
+}
+function applyCam(c, cam) {
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.translate(cam.x, cam.y);
+  c.rotate(cam.r * Math.PI / 180);
+  c.scale(cam.s, cam.s);
+}
+function toScreen(cam, x, y) {
+  const r = cam.r * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r);
+  return [cam.x + cam.s * (x * cs - y * sn), cam.y + cam.s * (x * sn + y * cs)];
+}
+
+// ---------- background ----------
+const DUST = Array.from({ length: 260 }, (_, i) => ({
+  x: (hash(i * 7 + 1) - 0.5) * 7, y: (hash(i * 7 + 2) - 0.5) * 11, z: 0.25 + 0.75 * hash(i * 7 + 3),
+  ph: hash(i * 7 + 4) * 6.28, sp: 0.4 + hash(i * 7 + 5), c: pal(hash(i * 7 + 6)), tw: 4 + Math.floor(hash(i * 7 + 8) * 12)
+}));
+function drawBackground(t, cam, energy) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  // deep nebula glow behind the pivot
+  const g = ctx.createRadialGradient(cam.x, cam.y + 120, 0, cam.x, cam.y + 120, 1100);
+  g.addColorStop(0, `rgba(30,22,80,${0.32 + 0.25 * energy})`);
+  g.addColorStop(0.45, `rgba(8,18,48,${0.22 + 0.1 * energy})`);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = "lighter";
+  // polar measurement grid around the pivot
+  const ga = 0.05 + 0.04 * sstep(2, 4, t) - 0.03 * sstep(16.8, 18, t) - 0.01 * sstep(T_REWIND, T_END, t);
+  applyCam(ctx, cam);
+  ctx.lineWidth = 1.2 / cam.s;
+  for (let r = 0.5; r <= 2.01; r += 0.5) {
+    ctx.strokeStyle = `rgba(60,160,255,${ga * (r === 2 ? 1.6 : 1)})`;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.strokeStyle = `rgba(60,160,255,${ga * 0.7})`;
+  ctx.beginPath();
+  for (let k = 0; k < 24; k++) { const a = k * Math.PI / 12; ctx.moveTo(0.12 * Math.cos(a), 0.12 * Math.sin(a)); ctx.lineTo(2.25 * Math.cos(a), 2.25 * Math.sin(a)); }
+  ctx.stroke();
+  // tick marks on the outer ring
+  ctx.beginPath();
+  for (let k = 0; k < 120; k++) { const a = k * Math.PI / 60, l = k % 10 ? 0.04 : 0.1; ctx.moveTo(2 * Math.cos(a), 2 * Math.sin(a)); ctx.lineTo((2 + l) * Math.cos(a), (2 + l) * Math.sin(a)); }
+  ctx.strokeStyle = `rgba(90,190,255,${ga * 1.8})`; ctx.stroke();
+  // parallax dust
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  for (const d of DUST) {
+    // every motion is periodic in T_END so the loop is seamless
+    const LP = 2 * Math.PI * t / T_END;
+    const wx = d.x + 0.06 * Math.sin(LP * 2 + d.ph), wy = d.y + 0.3 * d.sp * Math.sin(LP + d.ph);
+    const yy = ((wy % 11) + 16.5) % 11 - 5.5;
+    const sx = cam.x + (wx * cam.s) * d.z * 1.1, sy = cam.y + (yy * cam.s) * d.z * 1.1;
+    if (sx < -10 || sx > W + 10 || sy < -10 || sy > H + 10) continue;
+    const tw = 0.5 + 0.5 * Math.sin(LP * d.tw + d.ph);
+    const a = (0.08 + 0.22 * tw) * d.z * (1 + 1.2 * energy);
+    const rr = 0.8 + 2.2 * d.z;
+    ctx.fillStyle = rgba(d.c, a);
+    ctx.beginPath(); ctx.arc(sx, sy, rr, 0, 6.283); ctx.fill();
+  }
+}
+
+// ---------- the pendulums ----------
+const REP = 500;  // representative member (the middle of the ensemble)
+
+// Trails are sampled in PHYSICS time: the last `span` seconds of motion behind the
+// current state (ahead of it in tau while time runs backward). The span shrinks to
+// zero at the loop point so the final frame matches frame 0 (no trail).
+function trailWin(t, base) {
+  return base * (1 - sstep(23.0, T_END, t));
+}
+function trailPoints(i, t, span, K) {
+  const pts = new Float32Array(K * 2);
+  const tt = tau(t), dir = t > T_REWIND ? 1 : -1;
+  for (let j = 0; j < K; j++) {
+    const tj = clamp(tt + dir * span * (K - 1 - j) / (K - 1), 0, T_REWIND);
+    const p = joints(i, tj);
+    pts[2 * j] = p[2]; pts[2 * j + 1] = p[3];
+  }
+  return pts;
+}
+
+function drawSingle(t, cam, alpha) {
+  if (alpha <= 0.002) return;
+  const tt = tau(t);
+  const [x1, y1, x2, y2] = joints(REP, tt);
+  applyCam(ctx, cam);
+  const px = 1 / cam.s;
+  // tip trail: long, glowing, colour drifting cyan -> blue -> purple toward the tail
+  const win = trailWin(t, lerp(0.9, 2.6, sstep(5, 16, t)));
+  const K = Math.max(40, Math.round(lerp(0.9, 2.6, sstep(5, 16, t)) * 110));
+  const pts = trailPoints(REP, t, win, K);
+  const CH = 22;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (let c = 0; c < CH; c++) {
+    const u = (c + 1) / CH;
+    const j0 = Math.floor(c * (K - 1) / CH), j1 = Math.floor((c + 1) * (K - 1) / CH);
+    const col = pal(0.62 * (1 - u));
+    ctx.beginPath(); ctx.moveTo(pts[2 * j0], pts[2 * j0 + 1]);
+    for (let j = j0 + 1; j <= j1; j++) ctx.lineTo(pts[2 * j], pts[2 * j + 1]);
+    ctx.strokeStyle = rgba(col, alpha * 0.85 * u * u);
+    ctx.lineWidth = (1.5 + 5.5 * u) * px; ctx.stroke();
+    if (u > 0.5) { ctx.strokeStyle = rgba([255, 255, 255], alpha * 0.5 * (u - 0.5)); ctx.lineWidth = (1 + 1.5 * u) * px; ctx.stroke(); }
+  }
+  // middle-joint ghost trail (purple, short)
+  const K1 = 40, w1 = 0.5;
+  ctx.beginPath();
+  const w1r = trailWin(t, w1);
+  const dir1 = t > T_REWIND ? 1 : -1;
+  for (let j = 0; j < K1; j++) { const p = joints(REP, clamp(tt + dir1 * w1r * (K1 - 1 - j) / (K1 - 1), 0, T_REWIND)); j ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+  ctx.strokeStyle = `rgba(168,72,255,${alpha * 0.35})`; ctx.lineWidth = 3 * px; ctx.stroke();
+  // rods
+  for (const [w, a] of [[14, 0.10], [7, 0.22], [3.2, 0.95]]) {
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.strokeStyle = w < 4 ? `rgba(225,250,255,${alpha * a})` : `rgba(0,200,255,${alpha * a})`;
+    ctx.lineWidth = w * px; ctx.stroke();
+  }
+  // bobs and hinges
+  orb(0, 0, 7 * px, [120, 220, 255], alpha * 0.9);
+  orb(x1, y1, 15 * px, [168, 90, 255], alpha);
+  orb(x2, y2, 18 * px, [0, 235, 255], alpha);
+}
+function orb(x, y, r, col, a) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.2);
+  g.addColorStop(0, `rgba(255,255,255,${a})`);
+  g.addColorStop(0.22, rgba(col, a * 0.95));
+  g.addColorStop(0.45, rgba(col, a * 0.28));
+  g.addColorStop(1, rgba(col, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, 6.2832); ctx.fill();
+}
+
+function drawSwarm(t, cam, alpha, energy) {
+  if (alpha <= 0.002) return;
+  const tt = tau(t);
+  applyCam(ctx, cam);
+  const px = 1 / cam.s;
+  const per = N / NB;
+  const J = new Float32Array(N * 4);
+  for (let i = 0; i < N; i++) { const p = joints(i, tt); J[4 * i] = p[0]; J[4 * i + 1] = p[1]; J[4 * i + 2] = p[2]; J[4 * i + 3] = p[3]; }
+  // tip trails, chunked by age (alpha + width ramp), batched per colour bucket
+  const win = trailWin(t, lerp(0.42, 0.3, sstep(T_REVEAL, 19, t)));
+  const K = 24, CH = 5;
+  const TP = new Array(N);
+  for (let i = 0; i < N; i++) TP[i] = trailPoints(i, t, win, K);
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (let c = 0; c < CH; c++) {
+    const u = (c + 1) / CH;
+    const j0 = Math.floor(c * (K - 1) / CH), j1 = Math.floor((c + 1) * (K - 1) / CH);
+    ctx.lineWidth = (0.7 + 1.8 * u) * px;
+    for (let b = 0; b < NB; b++) {
+      ctx.beginPath();
+      for (let i = b * per; i < (b + 1) * per; i++) {
+        const P = TP[i];
+        ctx.moveTo(P[2 * j0], P[2 * j0 + 1]);
+        for (let j = j0 + 1; j <= j1; j++) ctx.lineTo(P[2 * j], P[2 * j + 1]);
+      }
+      ctx.strokeStyle = rgba(BUCKET_COL[b], alpha * 0.30 * u * u);
+      ctx.stroke();
+    }
+  }
+  // rods
+  ctx.lineWidth = 1.6 * px;
+  for (let b = 0; b < NB; b++) {
+    ctx.beginPath();
+    for (let i = b * per; i < (b + 1) * per; i++) { ctx.moveTo(0, 0); ctx.lineTo(J[4 * i], J[4 * i + 1]); ctx.lineTo(J[4 * i + 2], J[4 * i + 3]); }
+    ctx.strokeStyle = rgba(BUCKET_COL[b], alpha * 0.16);
+    ctx.stroke();
+  }
+  // bobs
+  for (let b = 0; b < NB; b++) {
+    ctx.fillStyle = rgba(BUCKET_COL[b], alpha * 0.75);
+    ctx.beginPath();
+    for (let i = b * per; i < (b + 1) * per; i++) {
+      ctx.moveTo(J[4 * i + 2] + 3.2 * px, J[4 * i + 3]); ctx.arc(J[4 * i + 2], J[4 * i + 3], 3.2 * px, 0, 6.2832);
+    }
+    ctx.fill();
+    ctx.fillStyle = rgba(BUCKET_COL[b], alpha * 0.3);
+    ctx.beginPath();
+    for (let i = b * per; i < (b + 1) * per; i++) {
+      ctx.moveTo(J[4 * i] + 2 * px, J[4 * i + 1]); ctx.arc(J[4 * i], J[4 * i + 1], 2 * px, 0, 6.2832);
+    }
+    ctx.fill();
+  }
+  orb(0, 0, 7 * px, [120, 220, 255], alpha * 0.9);
+  // sparks shed by the tips after the reveal (deterministic: born every 1/24 s)
+  if (energy > 0.01) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const LIFE = 0.8, STEP = 1 / 24;
+    const nowB = Math.floor(t / STEP);
+    for (let k = nowB; k > nowB - LIFE / STEP; k--) {
+      const tb = k * STEP; if (tb < T_REVEAL - 0.05) break;
+      const age = t - tb; if (age < 0 || age > LIFE) continue;
+      const life = age / LIFE;
+      for (let m = 0; m < 18; m++) {
+        const seed = k * 131 + m * 7;
+        const i = Math.floor(hash(seed) * N);
+        const p = joints(i, tau(tb)), q = joints(i, tau(tb + 0.01));
+        const vx = (q[2] - p[2]) / 0.01 * 0.18 + (hash(seed + 1) - 0.5) * 1.6;
+        const vy = (q[3] - p[3]) / 0.01 * 0.18 + (hash(seed + 2) - 0.5) * 1.6;
+        const d = age * (1 - 0.45 * life);
+        const [sx, sy] = toScreen(cam, p[2] + vx * d, p[3] + vy * d + 0.25 * age * age);
+        const col = BUCKET_COL[Math.floor(i / per)];
+        const a = energy * alpha * (1 - life) * (1 - life);
+        const r = 1 + 2.6 * (1 - life);
+        ctx.fillStyle = rgba(col, a);
+        ctx.fillRect(sx - r, sy - r, 2 * r, 2 * r);
+        ctx.fillStyle = `rgba(255,255,255,${a * 0.7})`;
+        ctx.fillRect(sx - r * 0.4, sy - r * 0.4, r * 0.8, r * 0.8);
+      }
+    }
+  }
+}
+
+// ---------- angle annotation (2-6 s) ----------
+function drawAngles(t, cam) {
+  const a = sstep(2.5, 3.1, t) * (1 - sstep(5.4, 5.9, t));
+  if (a <= 0) return;
+  const [x1, y1, x2, y2, th1, th2] = joints(REP, tau(t));
+  applyCam(ctx, cam);
+  const px = 1 / cam.s;
+  ctx.setLineDash([6 * px, 7 * px]); ctx.lineWidth = 1.6 * px;
+  ctx.strokeStyle = `rgba(160,220,255,${0.55 * a})`;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 0.75); ctx.moveTo(x1, y1); ctx.lineTo(x1, y1 + 0.75); ctx.stroke();
+  ctx.setLineDash([]);
+  const arc = (cx, cy, th, r, col) => {
+    ctx.beginPath();
+    // angle from downward vertical (canvas angle PI/2) to the rod
+    const st = Math.PI / 2, en = Math.PI / 2 - th;
+    ctx.arc(cx, cy, r, Math.min(st, en), Math.max(st, en));
+    ctx.strokeStyle = rgba(col, 0.95 * a); ctx.lineWidth = 3 * px; ctx.stroke();
+  };
+  arc(0, 0, th1, 0.32, [0, 240, 255]);
+  arc(x1, y1, th2, 0.32, [255, 150, 30]);
+  const lab = (cx, cy, th, txt, col) => {
+    const m = Math.PI / 2 - th / 2, r = 0.5;
+    const [sx, sy] = toScreen(cam, cx + r * Math.cos(m), cy + r * Math.sin(m));
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.font = "600 44px 'JetBrains Mono'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.shadowColor = rgba(col, 0.9); ctx.shadowBlur = 18;
+    ctx.fillStyle = rgba(col, a); ctx.fillText(txt, sx, sy);
+    ctx.restore();
+  };
+  lab(0, 0, th1, "θ₁", [0, 240, 255]);
+  lab(x1, y1, th2, "θ₂", [255, 170, 60]);
+}
+
+// ---------- magnifier inset (8.8-16 s): the 1,000 tips at extreme zoom ----------
+const INS = { x: 178, y: 1545, r: 128 };
+function drawInset(t, cam) {
+  const tt = tau(t);
+  const { env } = spreadAt(tt);
+  const mainZoom = cam.s;
+  let zoom = 0.62 * INS.r / Math.max(env, 1e-12);   // inset px per metre
+  const mag = zoom / mainZoom;
+  const a = sstep(8.8, 9.4, t) * sstep(0.15, 0.8, Math.log10(Math.max(mag, 1))) * (1 - sstep(16.2, 16.8, t));
+  if (a <= 0.003) return;
+  const [, , rx, ry] = joints(REP, tt);
+  const [tx, ty] = toScreen(cam, rx, ry);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = "source-over";
+  // connector from the tip to the lens
+  ctx.strokeStyle = `rgba(120,220,255,${0.45 * a})`; ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 6]); ctx.beginPath(); ctx.moveTo(tx, ty);
+  const ang = Math.atan2(ty - INS.y, tx - INS.x);
+  ctx.lineTo(INS.x + INS.r * Math.cos(ang), INS.y + INS.r * Math.sin(ang)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(tx, ty, 16, 0, 6.2832); ctx.strokeStyle = `rgba(120,220,255,${0.8 * a})`; ctx.lineWidth = 2; ctx.stroke();
+  // lens body
+  ctx.save();
+  ctx.beginPath(); ctx.arc(INS.x, INS.y, INS.r, 0, 6.2832);
+  ctx.fillStyle = `rgba(2,6,16,${0.92 * a})`; ctx.fill();
+  ctx.clip();
+  ctx.globalCompositeOperation = "lighter";
+  // faint crosshair
+  ctx.strokeStyle = `rgba(60,160,255,${0.18 * a})`; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(INS.x - INS.r, INS.y); ctx.lineTo(INS.x + INS.r, INS.y); ctx.moveTo(INS.x, INS.y - INS.r); ctx.lineTo(INS.x, INS.y + INS.r); ctx.stroke();
+  const per = N / NB;
+  const rr = cam.r * Math.PI / 180, cs = Math.cos(rr), sn = Math.sin(rr);
+  const prev = trailWin(t, 0.12), K = 6;
+  for (let b = 0; b < NB; b++) {
+    ctx.fillStyle = rgba(BUCKET_COL[b], 0.95 * a);
+    ctx.strokeStyle = rgba(BUCKET_COL[b], 0.35 * a);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const tr = new Path2D();
+    for (let i = b * per; i < (b + 1) * per; i++) {
+      for (let j = 0; j < K; j++) {
+        const tj = clamp(tt - prev * (K - 1 - j) / (K - 1), 0, T_REWIND);
+        const p = joints(i, tj), q = joints(REP, tj);
+        const dx = (p[2] - q[2]) * zoom, dy = (p[3] - q[3]) * zoom;
+        const sx = INS.x + dx * cs - dy * sn, sy = INS.y + dx * sn + dy * cs;
+        if (j === 0) tr.moveTo(sx, sy); else tr.lineTo(sx, sy);
+        if (j === K - 1) { ctx.moveTo(sx + 2.6, sy); ctx.arc(sx, sy, 2.6, 0, 6.2832); }
+      }
+    }
+    ctx.stroke(tr);
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.beginPath(); ctx.arc(INS.x, INS.y, INS.r, 0, 6.2832);
+  ctx.strokeStyle = `rgba(0,230,255,${0.9 * a})`; ctx.lineWidth = 3;
+  ctx.shadowColor = "rgba(0,230,255,0.9)"; ctx.shadowBlur = 16; ctx.stroke(); ctx.shadowBlur = 0;
+  // zoom readout
+  ctx.font = "700 32px 'JetBrains Mono'"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.fillStyle = `rgba(230,250,255,${a})`;
+  ctx.fillText("ZOOM ×" + Math.round(mag).toLocaleString("en-US"), INS.x, INS.y + INS.r + 14);
+}
+
+// ---------- spread graph (9.4-18.6 s): log scale, the signature of chaos ----------
+const GR = { x0: 450, x1: 930, y0: 1500, y1: 1640, tMax: 18, lo: -6.5, hi: 2.8 };
+function fmtDeg(d) {
+  if (d >= 10) return d.toFixed(0) + "°";
+  if (d >= 1) return d.toFixed(1) + "°";
+  const dec = Math.min(9, Math.max(2, 1 - Math.floor(Math.log10(d))));
+  return d.toFixed(dec) + "°";
+}
+function drawGraph(t) {
+  const a = sstep(9.4, 10.0, t) * (1 - sstep(18.0, 18.7, t));
+  if (a <= 0.003) return;
+  const tt = tau(t);
+  const gx = tv => lerp(GR.x0, GR.x1, tv / GR.tMax);
+  const gy = d => lerp(GR.y1, GR.y0, (Math.log10(Math.max(d, 1e-9)) - GR.lo) / (GR.hi - GR.lo));
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = `rgba(3,6,18,${0.6 * a})`;
+  ctx.fillRect(GR.x0 - 100, GR.y0 - 112, GR.x1 - GR.x0 + 116, GR.y1 - GR.y0 + 150);
+  ctx.font = "600 24px 'JetBrains Mono'"; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  ctx.fillStyle = `rgba(150,210,255,${0.85 * a})`;
+  ctx.fillText("SPREAD · LOG SCALE", GR.x0 - 84, GR.y0 - 72);
+  // grid lines
+  ctx.lineWidth = 1;
+  for (const [d, lab] of [[0.000001, "10⁻⁶°"], [0.001, "10⁻³°"], [1, "1°"], [360, "360°"]]) {
+    const y = gy(d);
+    ctx.strokeStyle = `rgba(80,140,220,${0.25 * a})`; ctx.beginPath(); ctx.moveTo(GR.x0, y); ctx.lineTo(GR.x1, y); ctx.stroke();
+    ctx.fillStyle = `rgba(120,170,230,${0.8 * a})`; ctx.font = "500 21px 'JetBrains Mono'"; ctx.textAlign = "right";
+    ctx.fillText(lab, GR.x0 - 12, y + 6);
+  }
+  ctx.strokeStyle = `rgba(120,180,255,${0.5 * a})`; ctx.beginPath(); ctx.moveTo(GR.x0, GR.y0 - 6); ctx.lineTo(GR.x0, GR.y1); ctx.lineTo(GR.x1, GR.y1); ctx.stroke();
+  ctx.textAlign = "right"; ctx.fillStyle = `rgba(120,170,230,${0.7 * a})`;
+  ctx.font = "500 21px 'JetBrains Mono'"; ctx.fillText("time →", GR.x1, GR.y1 + 28);
+  // curve: wipe-in of the history, then live
+  const reveal = s5((t - 9.4) / 0.9);
+  const tLive = Math.min(tt, GR.tMax) * reveal + 0 * (1 - reveal);
+  const steps = Math.max(2, Math.round(tLive * 30));
+  ctx.globalCompositeOperation = "lighter";
+  const grad = ctx.createLinearGradient(GR.x0, 0, GR.x1, 0);
+  grad.addColorStop(0, "#00f0ff"); grad.addColorStop(0.55, "#7a5cff"); grad.addColorStop(0.8, "#ff48be"); grad.addColorStop(1, "#ff961e");
+  for (const [w, al] of [[9, 0.18], [3.2, 1]]) {
+    ctx.beginPath();
+    for (let k = 0; k <= steps; k++) {
+      const tv = tLive * k / steps, d = spreadAt(tv).deg;
+      const X = gx(tv), Y = gy(d);
+      k ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y);
+    }
+    ctx.strokeStyle = grad; ctx.globalAlpha = al * a; ctx.lineWidth = w; ctx.lineJoin = "round"; ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const dNow = spreadAt(tLive).deg;
+  const hx = gx(tLive), hy = gy(dNow);
+  ctx.beginPath(); ctx.arc(hx, hy, 6, 0, 6.2832); ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fill();
+  // live value
+  ctx.globalCompositeOperation = "source-over";
+  ctx.textAlign = "right"; ctx.font = "700 44px 'JetBrains Mono'";
+  const hot = sstep(13.5, 16.5, tt);
+  ctx.fillStyle = `rgba(${Math.round(lerp(120, 255, hot))},${Math.round(lerp(240, 170, hot))},${Math.round(lerp(255, 60, hot))},${a})`;
+  ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14;
+  ctx.fillText(fmtDeg(dNow), GR.x1, GR.y0 - 26);
+  ctx.shadowBlur = 0;
+}
+
+// ---------- text ----------
+function txt(s, x, y, o) {
+  const a = o.alpha; if (a <= 0.003) return;
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.translate(x, y); if (o.scale) ctx.scale(o.scale, o.scale);
+  ctx.font = `${o.weight || 800} ${o.size}px ${o.family || "'Inter Display'"}`;
+  ctx.letterSpacing = (o.ls || 0) + "px";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  let fill = o.color || "#fff";
+  if (o.grad) {
+    const w = ctx.measureText(s).width;
+    const g = ctx.createLinearGradient(-w / 2, 0, w / 2, 0);
+    o.grad.forEach((c, k) => g.addColorStop(k / (o.grad.length - 1), c));
+    fill = g;
+  }
+  if (o.glow) { ctx.shadowColor = o.glow; ctx.shadowBlur = o.glowSize || 30; }
+  ctx.globalAlpha = a; ctx.fillStyle = fill;
+  ctx.fillText(s, 0, 0);
+  if (o.glow) { ctx.shadowBlur = 0; ctx.fillText(s, 0, 0); }
+  ctx.restore();
+}
+const inOut = (t, a, b, fi = 0.25, fo = 0.3) => sstep(a, a + fi, t) * (1 - sstep(b - fo, b, t));
+const rise = (t, a, d = 0.45) => (1 - easeOut((t - a) / d)) * 36;
+
+function drawText(t) {
+  const TY = 330;
+  // HOOK
+  {
+    const a1 = inOut(t, 0.1, 2.05, 0.18, 0.3), a2 = inOut(t, 0.32, 2.05, 0.18, 0.3);
+    const sc1 = lerp(1.25, 1, easeOutBack((t - 0.1) / 0.4)), sc2 = lerp(1.25, 1, easeOutBack((t - 0.32) / 0.4));
+    txt("CAN YOU", 540, TY - 60, { size: 104, weight: 900, alpha: a1, scale: sc1, ls: 4, glow: "rgba(0,220,255,0.55)" });
+    txt("PREDICT THIS?", 540, TY + 56, { size: 112, weight: 900, alpha: a2, scale: sc2, ls: 2, grad: ["#00f0ff", "#4a8bff", "#a848ff"], glow: "rgba(120,90,255,0.8)", glowSize: 40 });
+  }
+  // INTRO
+  {
+    const a = inOut(t, 2.25, 5.95);
+    txt("THE DOUBLE PENDULUM", 540, TY - 40 + rise(t, 2.25), { size: 50, weight: 800, alpha: a, ls: 10, color: "#7ff3ff", glow: "rgba(0,220,255,0.7)" });
+    txt("Two arms. Two hinges. Only gravity.", 540, TY + 36 + rise(t, 2.55), { size: 44, weight: 500, family: "'Inter'", alpha: inOut(t, 2.55, 4.3), color: "rgba(235,240,255,0.92)" });
+    txt("Zero randomness.", 540, TY + 36 + rise(t, 4.3), { size: 50, weight: 700, family: "'Inter'", alpha: inOut(t, 4.3, 5.95), color: "#ffb15c", glow: "rgba(255,140,30,0.55)" });
+  }
+  // BUILD
+  txt("This isn't one pendulum.", 540, TY + rise(t, 6.15), { size: 76, weight: 800, alpha: inOut(t, 6.15, 8.7), glow: "rgba(0,200,255,0.4)" });
+  {
+    const a = inOut(t, 8.7, 11.45);
+    const sc = lerp(1.4, 1, easeOutBack((t - 8.7) / 0.45));
+    txt("It's 1,000.", 540, TY - 20, { size: 138, weight: 900, alpha: a, scale: sc, grad: ["#00f0ff", "#a848ff", "#ff961e"], glow: "rgba(255,120,60,0.6)", glowSize: 44 });
+    txt("Each starts 0.000000001° apart", 540, TY + 92 + rise(t, 9.2), { size: 38, weight: 600, family: "'JetBrains Mono'", alpha: inOut(t, 9.2, 11.45), color: "#bfefff" });
+  }
+  txt("Still moving as one…", 540, TY + rise(t, 11.55), { size: 76, weight: 800, alpha: inOut(t, 11.55, 14.1), glow: "rgba(0,200,255,0.4)" });
+  {
+    const beat = 1 + 0.045 * Math.max(0, Math.sin((t - 14.2) * Math.PI * 2 * 1.25)) * sstep(14.2, 14.6, t);
+    txt("…for now.", 540, TY + rise(t, 14.2), { size: 96, weight: 900, alpha: inOut(t, 14.2, 16.85, 0.25, 0.2), scale: beat, color: "#ffd2a0", glow: "rgba(255,120,30,0.75)", glowSize: 40 });
+  }
+  // LOOP: time runs backward and the ensemble reunites
+  {
+    const a = inOut(t, 22.35, 23.55, 0.15, 0.35);
+    txt("◀◀  TIME REVERSED", 540, TY, { size: 40, weight: 700, family: "'JetBrains Mono'", ls: 6, alpha: a * (0.75 + 0.25 * Math.sin(t * 30)), color: "#9ff4ff", glow: "rgba(0,220,255,0.7)" });
+  }
+  // REVEAL
+  {
+    const a = inOut(t, 17.05, 21.95, 0.12, 0.45);
+    const sc = lerp(1.6, 1, easeOutBack((t - 17.05) / 0.5)) * (1 + 0.015 * (t - 17));
+    txt("CHAOS", 540, TY - 10, { size: 196, weight: 900, alpha: a, scale: sc, ls: 18, grad: ["#00f0ff", "#4a8bff", "#a848ff", "#ff48be", "#ff961e"], glow: "rgba(150,90,255,0.85)", glowSize: 60 });
+    txt("Deterministic.", 540, TY + 120 + rise(t, 18.2), { size: 52, weight: 700, family: "'Inter'", alpha: inOut(t, 18.2, 21.95, 0.25, 0.45), color: "#8ff6ff", glow: "rgba(0,220,255,0.6)" });
+    txt("Yet unpredictable.", 540, TY + 186 + rise(t, 19.1), { size: 52, weight: 700, family: "'Inter'", alpha: inOut(t, 19.1, 21.95, 0.25, 0.45), color: "#ffb15c", glow: "rgba(255,140,30,0.6)" });
+  }
+}
+
+// ---------- bloom / post ----------
+function bloom(strength) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  b1.globalCompositeOperation = "copy"; b1.filter = "blur(3px)"; b1.drawImage(cv, 0, 0, 540, 960); b1.filter = "none";
+  b2.globalCompositeOperation = "copy"; b2.filter = "blur(4px)"; b2.drawImage(B1, 0, 0, 270, 480); b2.filter = "none";
+  b3.globalCompositeOperation = "copy"; b3.filter = "blur(6px)"; b3.drawImage(B2, 0, 0, 135, 240); b3.filter = "none";
+  ctx.globalCompositeOperation = "lighter";
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+  ctx.globalAlpha = 0.55 * strength; ctx.drawImage(B1, 0, 0, W, H);
+  ctx.globalAlpha = 0.6 * strength; ctx.drawImage(B2, 0, 0, W, H);
+  ctx.globalAlpha = 0.7 * strength; ctx.drawImage(B3, 0, 0, W, H);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+}
+function vignette() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const g = ctx.createRadialGradient(540, 920, 500, 540, 920, 1250);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.65)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+
+// ---------- frame ----------
+function renderFrame(n) {
+  const t = n / FPS;
+  const cam = camAt(t);
+  const tt = tau(t);
+  const { env } = spreadAt(tt);
+  const sepPx = env * cam.s;
+  // single crisp pendulum until the ensemble visibly separates, then the whole swarm
+  const swarm = sstep(1.2, 7, sepPx);
+  const energy = sstep(T_REVEAL - 0.1, T_REVEAL + 0.4, t) * (1 - sstep(T_REWIND + 0.4, T_END - 0.2, t));
+  drawBackground(t, cam, energy);
+  ctx.globalCompositeOperation = "lighter";
+  drawSingle(t, cam, 1 - swarm);
+  ctx.globalCompositeOperation = "lighter";
+  drawSwarm(t, cam, swarm, energy);
+  ctx.globalCompositeOperation = "lighter";
+  drawAngles(t, cam);
+  // reveal: flash + shockwave
+  const dk = t - T_REVEAL;
+  if (dk > -0.02 && dk < 1.2) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = "lighter";
+    const R = 60 + 1500 * easeOut(dk / 1.0);
+    const ga = 0.6 * Math.pow(1 - clamp(dk / 1.0), 2);
+    ctx.lineWidth = 9 * (1 - clamp(dk / 1.0)) + 1.5;
+    ctx.strokeStyle = `rgba(120,200,255,${ga})`;
+    ctx.beginPath(); ctx.arc(cam.x, cam.y, R, 0, 6.2832); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,150,40,${ga * 0.7})`;
+    ctx.beginPath(); ctx.arc(cam.x, cam.y, R * 0.82, 0, 6.2832); ctx.stroke();
+  }
+  bloom(1 + 0.1 * energy);
+  if (dk > -0.02 && dk < 0.6) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = "lighter";
+    const f = Math.exp(-Math.max(0, dk) / 0.1);
+    const g = ctx.createRadialGradient(cam.x, cam.y, 0, cam.x, cam.y, 1300);
+    g.addColorStop(0, `rgba(220,245,255,${0.8 * f})`); g.addColorStop(0.5, `rgba(80,140,255,${0.35 * f})`); g.addColorStop(1, `rgba(60,0,120,${0.2 * f})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "source-over";
+  }
+  vignette();
+  drawInset(t, cam);
+  drawGraph(t);
+  drawText(t);
+}
+
+async function init() {
+  META = await (await fetch("sim.json")).json();
+  N = META.n; S = META.samples; RATE = META.rate;
+  SPREAD = { env: META.env, deg: META.deg };
+  const buf = await (await fetch("sim.bin")).arrayBuffer();
+  REPA = new Float64Array(buf, 0, S * 2);
+  DA = new Float32Array(buf, S * 2 * 8, S * 2 * N);
+  await document.fonts.load("900 100px 'Inter Display'");
+  await document.fonts.load("700 30px 'JetBrains Mono'");
+  await document.fonts.load("600 30px 'Inter'");
+  window.READY = true;
+  const q = new URLSearchParams(location.search);
+  if (q.has("t")) renderFrame(Math.round(parseFloat(q.get("t")) * FPS));
+}
+window.renderFrame = renderFrame;
+window.FRAMES = Math.round(T_END * FPS);
+init();
+</script>
+</body>
+</html>
