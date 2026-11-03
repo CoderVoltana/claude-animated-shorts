@@ -1,7 +1,7 @@
 #!/bin/bash
 # usage: stills.sh outdir t1 t2 ...   -> renders stills in parallel and a contact sheet outdir/sheet.png
 out=$1; shift; mkdir -p $out; rm -f $out/f_*.png
-for t in "$@"; do python3 render.py --still $t $out/f_$t.png 2>/dev/null & done; wait
+for t in "$@"; do python3 render.py --still $t $out/f_$t.png & done; wait
 python3 - "$out" <<'PY'
 import sys, glob
 from PIL import Image, ImageDraw

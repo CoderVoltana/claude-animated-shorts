@@ -43,14 +43,20 @@ The two curves stay parallel, about e⁸ ≈ 3,000× apart. That is roughly the 
 - Both copies run on the same Lyapunov clock, so their gap is fixed at ln(nudge/rounding)/λ ≈ 3.8 to 7 s of sim time. 40 % and 75 % cannot both be hit exactly. Physics wins, and the beats are 16.4 s and 21.0 s.
 - The graph's CYAN curve starts from 10⁻¹⁶ (axis floor, exactly zero error) and the data proper starts at ~4×10⁻¹⁵ rad. ORANGE starts at 1.7×10⁻¹² rad (= 10⁻¹⁰°).
 
+## Look (series style kit)
+Everything is drawn with `simtheory-style/simtheory_style.py` v1.0.0: colour roles (ghost = reference white `#F4F7FF`, cyan = main `#22E5FF`, orange = perturbed `#FF8A1E`, arrows = extra 1 purple `#A848FF`, HUD/axes = `hud`), the kit's bloom and roll-off, its line/trail/bob sizes, its fonts and text styles (captions in `headline`, readouts in `hud`/`label`) and its `SIM #02` tag. The kit layout is scaled to 1440×2560 (×4/3): text on `text_y`, the readout and graph in `hud_band`, and the pivot placed so that the full 2 m reach stays inside the square-safe zone and left of the Shorts UI column. The sim-time counter is removed. The HUD shows direction and playback speed only.
+
+Export follows the kit's colour standard (BT.709 matrix, tv range, BT.709 tags, verified with `check_export`). It differs from the kit in two documented ways, both required by the brief:
+- **Bitrate.** A CRF 6 kit master is re-encoded YUV→YUV at CRF 9, about 46 Mb/s. The kit's CRF 15 gave about 5 Mb/s.
+- **Audio.** The mastered mix is muxed directly. The kit's single-pass loudnorm had pushed it to −12.3 LUFS and halved its dynamic range.
+
 ## Delivery QA (`build/qa/qa.json`)
 | Check | Result |
 |---|---|
-| Video | H.264 High, 1440×2560, 60/1 fps, yuv420p BT.709, 1800 frames, 30.0 s, **37.0 Mb/s** (2-pass 40M) |
-| Audio | AAC-LC 48 kHz stereo ~302 kb/s (320k target) |
-| Loudness (ffmpeg ebur128) | **−14.0 LUFS** integrated, true peak **−1.3 dBTP**, LRA 8.1 LU |
-| Loop seam (audio) | last→first sample jump 0.0017 (smaller than the median sample step 0.0045): no click. Drone partials are whole cycles per 30 s, and reverb and high-pass are circular |
-| Loop seam (video) | first vs last frame PSNR **76 dB** (mean abs diff 0.001/255) |
-| Right 15 % | max pixel value 19/255 (faint bloom only) |
-| Bottom 20 % | max pixel value 55/255 (bloom halo of the lowest bob only, no content) |
+| Video | H.264 High, 1440×2560, 60/1 fps, yuv420p, BT.709 / tv tags, 1800 frames, 30.0 s, **46.1 Mb/s** |
+| Audio | AAC-LC 48 kHz stereo 256k |
+| Loudness (ffmpeg ebur128) | **−14.0 LUFS** integrated, true peak **−1.7 dBTP**, LRA 8.0 LU |
+| Loop seam (audio) | last→first sample jump 0.0017 (median sample step 0.0045): no click |
+| Loop seam (video) | first vs last frame PSNR 50 dB, mean abs diff 0.37/255. The only difference is the kit's per-frame dither |
+| Right 15 % / bottom 20 % | 0 content pixels (> 96/255) in any frame. Only the kit's nebula backdrop and faint bloom reach those zones |
 | Frozen spans while moving | none |

@@ -28,7 +28,7 @@ from physics import DT, all_omegas                                              
 N = ns(DUR)
 t = np.arange(N) / SR
 TARGET = -14.0
-CEIL = -1.3
+CEIL = -1.7
 D = np.load(os.path.join(HERE, "sim.npz"))
 EV = TL.EVENTS
 

@@ -39,7 +39,7 @@ def main():
     pr = probe(path)
     v = [s for s in pr["streams"] if s["codec_type"] == "video"][0]
     a = [s for s in pr["streams"] if s["codec_type"] == "audio"][0]
-    rep["video"] = dict(codec=v["codec_name"], profile=v.get("profile"), w=v["width"], h=v["height"], fps=v["r_frame_rate"],
+    rep["video"] = dict(color_space=v.get("color_space"), color_range=v.get("color_range"), codec=v["codec_name"], profile=v.get("profile"), w=v["width"], h=v["height"], fps=v["r_frame_rate"],
                         pix_fmt=v["pix_fmt"], frames=int(v.get("nb_frames", 0)), bitrate_mbps=int(v.get("bit_rate", 0)) / 1e6)
     rep["audio"] = dict(codec=a["codec_name"], sr=a["sample_rate"], ch=a["channels"], bitrate_kbps=int(a.get("bit_rate", 0)) / 1e3)
     rep["duration"] = float(pr["format"]["duration"])
@@ -53,9 +53,13 @@ def main():
     sheet = []
     for i, f in enumerate(frames(path, W, H)):
         g = f.astype(np.int16)
-        zr = int(g[:safe_b, safe_r:].max())            # right 15% (above the bottom band)
-        zb = int(g[safe_b:, :].max())                  # bottom 20%
-        zone_max.append((zr, zb))
+        # content pixels (> 96/255 on any channel) in the right 15 % / bottom 20 %; the kit's nebula backdrop,
+        # dither and faint bloom stay far below that
+        zr = int(g[:safe_b, safe_r:].max())
+        zb = int(g[safe_b:, :].max())
+        cr = int((g[:safe_b, safe_r:].max(-1) > 96).sum())
+        cb = int((g[safe_b:, :].max(-1) > 96).sum())
+        zone_max.append((zr, zb, cr, cb))
         if prev is not None:
             diffs.append(float(np.abs(g[::4, ::4] - prev[::4, ::4]).mean()))
         prev = g
@@ -68,6 +72,8 @@ def main():
     rep["frames_decoded"] = len(zone_max)
     rep["safe_zone_right15_max_value"] = int(zone_max[:, 0].max())
     rep["safe_zone_bottom20_max_value"] = int(zone_max[:, 1].max())
+    rep["safe_zone_right15_content_pixels_max"] = int(zone_max[:, 2].max())
+    rep["safe_zone_bottom20_content_pixels_max"] = int(zone_max[:, 3].max())
     d = first.astype(float) - last.astype(float)
     mse = float((d ** 2).mean())
     rep["loop_first_vs_last_psnr_db"] = 99.0 if mse == 0 else float(10 * np.log10(255 ** 2 / mse))
