@@ -25,3 +25,7 @@ Simulated with the exact equations of motion (RK4, energy conserved to 10⁻⁹ 
 | `thumb_D_chaos_clean.png` | 19.6 s, clean render (`CLEAN=1`) | Only the CHAOS title and the pendulums: no sublines, graph or legend. Needs custom upload, since this exact frame isn't in the video. |
 | `thumb_A_chaos.png` | 17.5 s | Best pick in the in-app frame selector: CHAOS title plus the burst. |
 | `thumb_B_tracked.png` | 19.6 s | Alternative frame: the 5 tracked pendulums and their starting angles. |
+
+## Instagram
+`out/thumbnails/instagram_post_4x5.png`: 1080x1350 (4:5 portrait, the largest feed format).
+It's a crop of the clean 19.6 s render. The profile grid's 3:4 crop trims about 34 px per side, and the title stays clear of it.
