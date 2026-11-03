@@ -12,7 +12,7 @@ import timeline as TL
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "simtheory-style"))
 import simtheory_style as S  # noqa: E402
-from render import NEBULA_C  # noqa: E402
+from render import NEBULA_C, LAYOUT  # noqa: E402
 
 W, H = 1440, 2560
 mp4 = sys.argv[1]
@@ -60,7 +60,10 @@ bg = S.Frame(w=W, h=H, nebula_center=NEBULA_C).finish().astype(np.int16)
 worst = 0
 for im in frames("not(mod(n\\,30))"):
     im = np.clip(im.astype(np.int16) - bg, 0, 255).max(axis=2)
-    out = np.concatenate([im[:384].ravel(), im[1664:].ravel(), im[:, 1152:].ravel()])
+    if LAYOUT == "shorts":   # clear of the Shorts/Reels UI: top 15 %, bottom 35 %, right 20 %
+        out = np.concatenate([im[:384].ravel(), im[1664:].ravel(), im[:, 1152:].ravel()])
+    else:                    # full frame: normal 5 % edge margins
+        out = np.concatenate([im[:128].ravel(), im[2432:].ravel(), im[:, :72].ravel(), im[:, 1368:].ravel()])
     worst = max(worst, int(out.max()))
-print(f"safe area: brightest pixel outside the central safe box over 60 sampled frames (above backdrop) = {worst}/255 "
+print(f"safe area: brightest pixel outside the safe box ({LAYOUT} layout) over 60 sampled frames (above backdrop) = {worst}/255 "
       f"-> {'PASS' if worst < 60 else 'CHECK'}")

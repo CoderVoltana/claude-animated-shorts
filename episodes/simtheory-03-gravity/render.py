@@ -26,11 +26,6 @@ BUILD = os.path.join(HERE, "build")
 W, H = 1440, 2560                # brief: 1440x2560; the kit scales every size by H/1920
 SC = H / 1920.0
 
-# --- safe area from the brief (clear of top 15 %, bottom 35 %, right 20 %) --------------------
-SAFE_X1, SAFE_Y0, SAFE_Y1 = int(W * 0.80), int(H * 0.15), int(H * 0.65)    # 1152, 384, 1664
-CX = 576                         # content centre line (centre of 0..1152)
-TEXT_MAXW = 1056                 # 48..1104
-
 # --- kit colour roles ----------------------------------------------------------------------
 EARTH = S.role_color("main")            # cyan: the normal / ideal case (Earth)
 HEAVY = S.role_color("perturbed")       # orange: the "different" case (10x gravity)
@@ -42,30 +37,56 @@ EARTH_N, HEAVY_N, GHOST_N = "cyan", "orange", "purple"   # role colour names for
 S.TEXT["number_main"] = dict(S.TEXT["number"], color=EARTH_N, glow=EARTH_N)
 S.TEXT["number_perturbed"] = dict(S.TEXT["number"], color=HEAVY_N, glow=HEAVY_N)
 
-# --- layout (px at 1440x2560) ----------------------------------------------------------------
-CAP_Y = 468                      # centre of the first caption line
-CAP_SCALE = 0.72                 # kit "headline" at 0.72 -> ~100 px, two lines max
-LABEL_Y = 760
-LABEL_SCALE = 1.2
-COUNTER_Y = 872
-COUNTER_SCALE = 2.45
-PIVOT_Y = 992
-PIV_E = (312.0, PIVOT_Y)
-PIV_H = (840.0, PIVOT_Y)
+# --- layout --------------------------------------------------------------------------------
+# "shorts": everything clear of the Shorts/Reels UI (top 15 %, bottom 35 %, right 20 %).
+# "full":   the same scene centred and scaled up to use the whole 9:16 frame (normal edge margins only).
+LAYOUT = os.environ.get("SIMTHEORY_LAYOUT", "shorts")
+if LAYOUT == "shorts":
+    CX = 576                     # content centre line (centre of 0..1152)
+    TEXT_MAXW = 1056             # 48..1104
+    CAP_Y = 468                  # centre of the first caption line
+    CAP_SCALE = 0.72             # kit "headline" at 0.72 -> ~100 px
+    LABEL_Y, LABEL_SCALE = 760, 1.2
+    COUNTER_Y, COUNTER_SCALE = 872, 2.45
+    PIVOT_Y = 992
+    HALF = 264                   # pivot offset from the centre line
+    LPX = 520.0                  # 1 m on screen
+    FORMULA_C, FORMULA_W = (float(CX), 1262.0), 930.0
+    FIELD_Y = (720.0, 1655.0)
+    GHOST_LABEL_Y = 1612
+    NEBULA_C = (CX, 1180)
+    BREAKS = {
+        "10× stronger gravity…": ["10× stronger", "gravity…"],
+        "…10× faster swing?": ["…10× faster", "swing?"],
+        "Gravity hides under a square root.": ["Gravity hides", "under a square root."],
+        "For 10× faster, you'd need 100× gravity.": ["For 10× faster, you'd", "need 100× gravity."],
+    }
+elif LAYOUT == "full":
+    CX = 720
+    TEXT_MAXW = 1260             # 90..1350
+    CAP_Y = 340
+    CAP_SCALE = 0.92             # ~128 px headlines
+    LABEL_Y, LABEL_SCALE = 820, 1.55
+    COUNTER_Y, COUNTER_SCALE = 975, 3.3
+    PIVOT_Y = 1150
+    HALF = 330
+    LPX = 770.0
+    FORMULA_C, FORMULA_W = (float(CX), 1640.0), 1110.0
+    FIELD_Y = (760.0, 2330.0)
+    GHOST_LABEL_Y = 2060
+    NEBULA_C = (CX, 1550)
+    BREAKS = {
+        "10× stronger gravity…": ["10× stronger", "gravity…"],
+        "…10× faster swing?": ["…10× faster", "swing?"],
+        "Gravity hides under a square root.": ["Gravity hides", "under a square root."],
+        "For 10× faster, you'd need 100× gravity.": ["For 10× faster,", "you'd need", "100× gravity."],
+    }
+else:
+    raise SystemExit(f"unknown SIMTHEORY_LAYOUT {LAYOUT!r}")
+PIV_E = (float(CX - HALF), PIVOT_Y)
+PIV_H = (float(CX + HALF), PIVOT_Y)
 PIV_G = (float(CX), PIVOT_Y)
-LPX = 520.0                      # 1 m on screen
-FORMULA_C = (float(CX), 1262.0)
-FORMULA_W = 930.0
-FIELD_Y = (720.0, 1655.0)
-NEBULA_C = (CX, 1180)
-
-# caption line breaks (text itself is unchanged from the brief)
-BREAKS = {
-    "10× stronger gravity…": ["10× stronger", "gravity…"],
-    "…10× faster swing?": ["…10× faster", "swing?"],
-    "Gravity hides under a square root.": ["Gravity hides", "under a square root."],
-    "For 10× faster, you'd need 100× gravity.": ["For 10× faster, you'd", "need 100× gravity."],
-}
+PXS = LPX / 520.0                # px-per-metre relative to the Shorts layout (for cosmetic particle motion)
 
 # ---------------------------------------------------------------------------------------------
 E = sim.Traj(sim.G_EARTH, 13.0)
@@ -173,8 +194,8 @@ def _field(n, x_lo, x_hi, wraps):
 
 
 # speeds are whole numbers of wraps per loop, so the field loops seamlessly
-FIELD_E = _field(30, 70, 545, [3, 4, 4, 5])
-FIELD_H = _field(78, 607, 1100, [14, 16, 17, 18, 20])
+FIELD_E = _field(int(30 * PXS ** 1.5), CX - HALF - 242, CX - 31, [3, 4, 4, 5])
+FIELD_H = _field(int(78 * PXS ** 1.5), CX + 31, CX + HALF + 260, [14, 16, 17, 18, 20])
 
 
 def draw_field(f, cam, t, field, color, alpha, streak_s):
@@ -300,14 +321,14 @@ def render(fi):
     draw_field(f, cam, t, FIELD_H, HEAVY, 0.30 * field_a, 0.035)
 
     # divider (kit HUD colour)
-    top, bot = 715.0, 1655.0
+    top, bot = FIELD_Y[0] - 5, FIELD_Y[1]
     for k in range(20):
         ya, yb = top + (bot - top) * k / 20, top + (bot - top) * (k + 1) / 20
         a = math.sin(math.pi * (k + 0.5) / 20) ** 0.8
         f.line(cam.pts([CX, CX], [ya, yb]), HUD, width=S.SIZES["ensemble_line"] * 1.6 * cam.z, alpha=0.35 * a)
 
-    draw_sparks(f, cam, t, SPARKS_E, lambda ts: bob_xy(PIV_E, theta_e(ts)), EARTH, 45.0, dim)
-    draw_sparks(f, cam, t, SPARKS_H, lambda ts: bob_xy(PIV_H, theta_h(ts)), HEAVY, 450.0, dim)
+    draw_sparks(f, cam, t, SPARKS_E, lambda ts: bob_xy(PIV_E, theta_e(ts)), EARTH, 45.0 * PXS, dim)
+    draw_sparks(f, cam, t, SPARKS_H, lambda ts: bob_xy(PIV_H, theta_h(ts)), HEAVY, 450.0 * PXS, dim)
 
     trail_fade = 1.0 if not frozen else max(0.0, 1 - since_sync / 0.7)
     draw_pendulum(f, cam, t, PIV_E, theta_e, EARTH, dim, 0.55, trail_fade)
@@ -346,7 +367,7 @@ def render(fi):
             f.line([P, B], GHOST, width=S.SIZES["line"] * 1.5 * cam.z, alpha=1.1 * a / nl)
             f.bob(B[0], B[1], GHOST, r=S.SIZES["bob"] * cam.z, alpha=1.4 * a / nl)
         f.pivot(P[0], P[1], alpha=a)
-        X, Y = cam.p(CX, 1612)
+        X, Y = cam.p(CX, GHOST_LABEL_Y)
         f.text("100× GRAVITY", float(X), float(Y), style="label", color=GHOST_N, alpha=min(1.0, 1.4 * a),
                scale=float(LABEL_SCALE * cam.z))
 
@@ -408,13 +429,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--still", nargs="*", type=float)
     ap.add_argument("--video", action="store_true")
-    ap.add_argument("--out", default=os.path.join(BUILD, "video.mp4"))
+    ap.add_argument("--out", default=os.path.join(BUILD, "video.mp4" if LAYOUT == "shorts" else f"video_{LAYOUT}.mp4"))
     args = ap.parse_args()
     if args.still is not None:
         os.makedirs(os.path.join(BUILD, "stills"), exist_ok=True)
         for ts in args.still:
             fi = int(round(ts * TL.FPS))
-            p = os.path.join(BUILD, "stills", f"f{fi:04d}.png")
+            p = os.path.join(BUILD, "stills", f"{LAYOUT}_f{fi:04d}.png")
             Image.fromarray(render(fi)).save(p)
             print(p)
     if args.video:

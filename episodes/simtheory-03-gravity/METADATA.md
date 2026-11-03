@@ -1,6 +1,8 @@
 # SimTheory #03: What if gravity was 10× stronger?
 
-**Video:** `out/SimTheory_03_10x_Gravity.mp4` (1440×2560, 60 fps, H.264 High, BT.709, AAC 256 kb/s, 30.0 s, loops seamlessly)
+**Videos** (1440×2560, 60 fps, H.264 High, BT.709, AAC 256 kb/s, 30.0 s, loop seamlessly):
+- `out/SimTheory_03_10x_Gravity_fullframe.mp4`: **full-frame 9:16**. The scene is centred and scaled up to use the whole frame, with normal 5% edge margins. Use this one for YouTube.
+- `out/SimTheory_03_10x_Gravity.mp4`: **Shorts/Reels-UI-safe**. Everything stays clear of the top 15%, bottom 35% and right 20%.
 
 ## Upload text
 

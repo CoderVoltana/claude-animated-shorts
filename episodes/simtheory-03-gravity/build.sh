@@ -14,3 +14,10 @@ ffmpeg -y -loglevel error -i build/video.mp4 -i build/audio.wav -map 0:v -map 1:
   -c:a aac -b:a 256k -ar 48000 -movflags +faststart \
   -metadata title="SimTheory #03 - What if gravity was 10x stronger?" out/SimTheory_03_10x_Gravity.mp4
 python3 qa.py out/SimTheory_03_10x_Gravity.mp4 | tee qa_report.txt
+
+# full-frame 9:16 version (same scene centred and scaled to use the whole frame, no Shorts-UI margins)
+SIMTHEORY_LAYOUT=full python3 render.py --video
+ffmpeg -y -loglevel error -i build/video_full.mp4 -i build/audio.wav -map 0:v -map 1:a -c:v copy \
+  -c:a aac -b:a 256k -ar 48000 -movflags +faststart \
+  -metadata title="SimTheory #03 - What if gravity was 10x stronger? (full frame)" out/SimTheory_03_10x_Gravity_fullframe.mp4
+SIMTHEORY_LAYOUT=full python3 qa.py out/SimTheory_03_10x_Gravity_fullframe.mp4 | tee qa_report_fullframe.txt
