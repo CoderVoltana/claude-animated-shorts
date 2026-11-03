@@ -36,16 +36,14 @@ print(f"loudness (ffmpeg ebur128, decoded AAC): integrated {I:.1f} LUFS, true pe
       f"-> {'PASS' if abs(I + 14) <= 1 and TP < -1 else 'CHECK'}")
 
 
-def frame(fi):
-    raw = run(["ffmpeg", "-v", "error", "-i", mp4, "-vf", f"select=eq(n\\,{fi})", "-vframes", "1", "-f", "rawvideo",
-               "-pix_fmt", "rgb24", "-"])
-    return subprocess.run(["ffmpeg", "-v", "error", "-i", mp4, "-vf", f"select=eq(n\\,{fi})", "-vframes", "1",
-                           "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True).stdout
+def frames(select):
+    b = subprocess.run(["ffmpeg", "-v", "error", "-i", mp4, "-vf", f"select='{select}'", "-vsync", "0",
+                        "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True).stdout
+    return np.frombuffer(b, np.uint8).reshape(-1, H, W, 3)
 
 
 def get(fi):
-    b = frame(fi)
-    return np.frombuffer(b, np.uint8).reshape(H, W, 3).astype(np.int16)
+    return frames(f"eq(n\\,{fi})")[0].astype(np.int16)
 
 
 f0, fl = get(0), get(TL.NFRAMES - 1)
@@ -53,8 +51,8 @@ print(f"loop: first vs last frame mean |diff| = {np.abs(f0 - fl).mean():.3f} / 2
 
 # safe area: anything brighter than a faint glow outside the box?
 worst = 0
-for fi in range(0, TL.NFRAMES, 30):
-    im = get(fi).max(axis=2)
+for im in frames("not(mod(n\\,30))"):
+    im = im.max(axis=2)
     out = np.concatenate([im[:384].ravel(), im[1664:].ravel(), im[:, 1152:].ravel()])
     worst = max(worst, int(out.max()))
 print(f"safe area: brightest pixel outside the central safe box over 60 sampled frames = {worst}/255 "

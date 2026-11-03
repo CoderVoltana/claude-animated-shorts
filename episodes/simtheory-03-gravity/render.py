@@ -500,7 +500,7 @@ def render(fi):
             if 0 <= u < dur:
                 v = u / dur
                 c = bob_xy(piv, thfn(te))
-                R = BOB_R + (150 if last else 46) * (1 - (1 - v) ** 2.2)
+                R = BOB_R + (76 if last else 46) * (1 - (1 - v) ** 2.2)
                 fr.ring(c, R, 7 if last else 5, col, (1 - v) ** 1.5 * (1.0 if last else 0.55), glow_w=1.0)
 
     # ghost (100x gravity): real sim, 360-degree shutter, many samples -> blur

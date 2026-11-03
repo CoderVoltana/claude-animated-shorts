@@ -49,7 +49,7 @@ CAPTIONS = [
     ("Only 3.16× faster.", T_SYNC + 0.18, 17.95),
     ("Gravity hides under a square root.", 18.10, 21.70),
     ("For 10× faster, you'd need 100× gravity.", 21.95, 27.15),
-    ("10× stronger gravity…", 27.70, 99.0),
+    ("10× stronger gravity…", 27.55, 99.0),
 ]
 CAP_FADE_IN = 0.22
 CAP_FADE_OUT = 0.18
