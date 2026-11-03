@@ -15,7 +15,8 @@ It has a neon-on-black look and loops seamlessly.
 ## Science
 - `sim.py` integrates the exact equations of motion for two point masses (1 kg) on massless rigid 1 m rods with frictionless hinges and g = 9.81 m/s². It uses classical RK4 in float64 with h = 1/2400 s.
 - Start: θ₁ = 140°, θ₂ = 175° + i · 10⁻⁹° for i = 0…499, both at rest.
-- Tracked members 50, 150, 250, 350 and 450 (θ₂ = 175.00000005° … 175.00000045°) are five different initial conditions under the same equations. They're drawn last, with thicker, brighter trails. Energy drift over the run is about 3·10⁻⁹ J.
+- Tracked members 50, 150, 250, 350 and 450 (θ₂ = 175.00000005° … 175.00000045°) are five different initial conditions under the same equations. They're drawn last, with thicker, brighter trails.
+- Energy drift over the run is about 3·10⁻⁹ J.
 - Everything shown is real output:
   - The motion, the separation, and the graph (spread of θ₂ across the ensemble).
   - The zoom factor (the magnification needed to see the tips apart).
