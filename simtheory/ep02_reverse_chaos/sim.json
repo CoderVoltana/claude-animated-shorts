@@ -1,0 +1,55 @@
+{
+  "TH0_DEG": 117.0,
+  "T_SIM": 24.5,
+  "DT": 0.0001,
+  "steps": 245000,
+  "integrator": "implicit midpoint (canonical th,p), fixed-point to machine precision",
+  "max_fixed_point_iters": 8,
+  "E0": 13.360940407334859,
+  "energy_drift_rel": 1.274123023239531e-06,
+  "nudge_rad": 1.7453292519943296e-12,
+  "theta1_rev": 12.367162631635598,
+  "theta1_nudged": 12.367162631637344,
+  "cyan_first_sep": 0.0,
+  "orange_first_sep": 1.7461587731304462e-12,
+  "tau_orange": 10.9307,
+  "tau_cyan": 18.038700000000002,
+  "frac_orange": 0.44615102040816323,
+  "frac_cyan": 0.7362734693877552,
+  "lyapunov_fit": {
+    "common_cyan": {
+      "slope": 2.106185086318529,
+      "intercept": -35.471137527787256,
+      "t_lo": 0.5,
+      "t_hi": 9.143,
+      "r2": 0.9821011713752456
+    },
+    "common_orange": {
+      "slope": 2.107716824092716,
+      "intercept": -27.46610251307738,
+      "t_lo": 0.5,
+      "t_hi": 9.143,
+      "r2": 0.9800602632739847
+    },
+    "own_cyan": {
+      "slope": 1.8587520434018816,
+      "intercept": -34.036372517147754,
+      "t_lo": 0.1212,
+      "t_hi": 16.0033,
+      "r2": 0.9654665157335429
+    },
+    "own_orange": {
+      "slope": 2.107098753314738,
+      "intercept": -27.462806855433648,
+      "t_lo": 0.0,
+      "t_hi": 9.143,
+      "r2": 0.9828143904155513
+    },
+    "lambda_mean_common": 2.1069509552056225
+  },
+  "ghost_return_err": 0.0,
+  "cyan_return_err": 2.9817047554712355,
+  "hamilton_vs_lagrange_max_rel_err": 2.478692389206227e-09,
+  "sanity_small_angle_return_err_rad": 3.3306690738754696e-16,
+  "sanity_small_angle_pass": true
+}
