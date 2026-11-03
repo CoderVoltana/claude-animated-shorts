@@ -36,15 +36,37 @@ PERT = S.role_color("perturbed")
 ARROW = S.role_color("extra", 0)
 HUDC = S.C("hud")
 
-# ------------------------------------------------------------------ layout (kit SAFE zones x K)
+# ------------------------------------------------------------------ layouts
 YT_RIGHT = W * 0.85                                            # Shorts UI column starts at x = 1224
-TEXT_X = S.SAFE["subject"][0] * K                              # kit centre line (720)
-TEXT_Y = S.SAFE["text_y"] * K                                  # 673
-TEXT_MAXW = 2 * (YT_RIGHT - 16 - TEXT_X)                       # keeps captions left of the Shorts UI column
-HUD_BAND = [v * K for v in S.SAFE["hud_band"]]                 # (1760, 2000): graph / readouts
-PIV = (690.0, 1215.0)                                          # pivot: the full 2 m reach stays inside the
-RPX = 240.0                                                    # square, above the HUD band, left of x = 1224
-TAG_XY = (S.TAG["xy"][0] * K, S.TAG["xy"][1] * K)
+LAYOUTS = {
+    # "square": the kit's square-safe layout (kit SAFE zones x K). Everything readable sits in the centred square,
+    # so it survives Instagram's square / 4:5 / 3:4 crops and the Reels UI (and stays left of the Shorts column).
+    "square": dict(
+        text_x=S.SAFE["subject"][0] * K, text_y=S.SAFE["text_y"] * K, cap_scale=0.64,
+        piv=(690.0, 1215.0), rpx=240.0, zoom=0.06,
+        tag_xy=(S.TAG["xy"][0] * K, S.TAG["xy"][1] * K),
+        hud="band", hud_xy=(100.0, S.SAFE["hud_band"][0] * K + 40),
+        graph=(100.0, S.SAFE["hud_band"][0] * K, 1180.0, S.SAFE["hud_band"][1] * K)),
+    # "youtube": full 9:16 frame, only YouTube Shorts' UI avoided (right 15 %, bottom 20 %). Tag and HUD at the top,
+    # captions in the upper-middle third, graph in the upper-middle area, a larger pendulum. Same kit look.
+    "youtube": dict(
+        text_x=YT_RIGHT / 2, text_y=520.0, cap_scale=0.74, maxw=YT_RIGHT - 2 * S.SAFE["margin"] * K,
+        piv=(YT_RIGHT / 2, 1450.0), rpx=272.0, zoom=0.05,
+        tag_xy=(64.0, 150.0),
+        hud="top", hud_xy=(YT_RIGHT - 40, 150.0 + 13 * K),
+        graph=(80.0, 760.0, 1190.0, 1100.0)),
+}
+
+
+def apply_layout(name):
+    global LAYOUT, TEXT_X, TEXT_Y, TEXT_MAXW, PIV, RPX, TAG_XY
+    LAYOUT = LAYOUTS[name]
+    TEXT_X, TEXT_Y = LAYOUT["text_x"], LAYOUT["text_y"]
+    TEXT_MAXW = LAYOUT.get("maxw", 2 * (YT_RIGHT - 16 - TEXT_X))  # captions stay left of the Shorts UI column
+    PIV, RPX, TAG_XY = LAYOUT["piv"], LAYOUT["rpx"], LAYOUT["tag_xy"]
+
+
+apply_layout(os.environ.get("SIM_LAYOUT", "square"))
 
 # ------------------------------------------------------------------ data
 D = np.load(os.path.join(HERE, "sim.npz"))
@@ -70,7 +92,8 @@ def sstep(a, b, t):
 
 def zoom(t):
     """slow push-in during the rewind, easing back out at the reveal."""
-    return 1.0 + 0.06 * sstep(11.0, 22.0, t) - 0.06 * sstep(23.6, 25.8, t)
+    z = LAYOUT["zoom"]
+    return 1.0 + z * sstep(11.0, 22.0, t) - z * sstep(23.6, 25.8, t)
 
 
 class Cam:
@@ -183,7 +206,7 @@ def captions(f, t):
         dy = 16 * (1 - ain) - 10 * (1 - aout)
         hook = s.startswith("Can you")
         f.text(CAPTION_LINES.get(s, s.upper()), TEXT_X, TEXT_Y + dy, style="headline", alpha=a,
-               scale=1.0 if hook else 0.64, max_width=TEXT_MAXW)
+               scale=1.0 if hook else LAYOUT["cap_scale"], max_width=TEXT_MAXW)
 
 
 def tag(f):
@@ -195,18 +218,24 @@ def tag(f):
 
 
 def hud(f, t):
-    """direction + playback speed readout in the kit's HUD band (no sim-time counter). It gives the band to the
-    graph during the reveal and is back, identical to frame 1, for the loop."""
-    a = 1 - sstep(TL.T_GRAPH - 0.3, TL.T_GRAPH, t) + sstep(TL.T_GRAPH_OUT + 0.3, TL.T_GRAPH_OUT + 0.6, t)
-    if a <= 0.003:
-        return
-    y = HUD_BAND[0] + 40
+    """direction + playback speed (no sim-time counter). Square layout: in the kit's HUD band, giving the band to
+    the graph during the reveal. YouTube layout: top-right. Identical to frame 1 again for the loop."""
     rev = sstep(TL.T_FLIP - 0.04, TL.T_FLIP + 0.04, t) * (1 - sstep(29.25, 29.65, t))
+    x, y = LAYOUT["hud_xy"]
+    spd = f"\u00d7{TL.speed(t):.1f}"
+    if LAYOUT["hud"] == "band":
+        a = 1 - sstep(TL.T_GRAPH - 0.3, TL.T_GRAPH, t) + sstep(TL.T_GRAPH_OUT + 0.3, TL.T_GRAPH_OUT + 0.6, t)
+        if a <= 0.003:
+            return
+        anchor, y2, x2 = "lm", y, YT_RIGHT - 44
+        spd, sa = "PLAYBACK " + spd, "rm"
+    else:
+        a, anchor, y2, x2, sa = 1.0, "rm", y + 40 * f.s, x, "rm"
     if 1 - rev > 0.003:
-        f.text("\u25b6\u25b6 FORWARD", 100, y, style="hud", alpha=a * (1 - rev), anchor="lm")
+        f.text("\u25b6\u25b6 FORWARD", x, y, style="hud", alpha=a * (1 - rev), anchor=anchor)
     if rev > 0.003:
-        f.text("\u25c0\u25c0 REVERSED", 100, y, style="hud", color=S.ROLES["extra"][0], alpha=a * rev, anchor="lm")
-    f.text(f"PLAYBACK \u00d7{TL.speed(t):.1f}", YT_RIGHT - 44, y, style="hud", alpha=a, anchor="rm")
+        f.text("\u25c0\u25c0 REVERSED", x, y, style="hud", color=S.ROLES["extra"][0], alpha=a * rev, anchor=anchor)
+    f.text(spd, x2, y2, style="hud", alpha=a, anchor=sa)
 
 
 # ------------------------------------------------------------------ graph (kit HUD band)
@@ -221,18 +250,21 @@ def graph(f, t):
     a = sstep(TL.T_GRAPH, TL.T_GRAPH + 0.3, t) * (1 - sstep(TL.T_GRAPH_OUT, TL.T_GRAPH_OUT + 0.3, t))
     if a <= 0.003:
         return
-    b0, b1 = HUD_BAND
-    px0, px1 = 240.0, 1180.0
+    gx0, b0, gx1, b1 = LAYOUT["graph"]
+    px0, px1 = gx0 + 140, gx1
     py0, py1 = b0 + 62, b1 - 50
+    tall = (py1 - py0) > 200
 
     def X(tau):
         return px0 + (px1 - px0) * tau / T_SIM
 
     def Y(lg):
         return py1 - (py1 - py0) * (lg - YMIN) / (YMAX - YMIN)
-    f.text("SEPARATION FROM THE PERFECT REWIND (rad)", 100, b0 + 18, style="hud", alpha=a, anchor="lm")
+    f.text("SEPARATION FROM THE PERFECT REWIND (rad)", gx0, b0 + 18, style="hud", alpha=a, anchor="lm")
     f.line([(px0, py0 - 6), (px0, py1), (px1, py1)], HUDC, width=1.4, alpha=0.9 * a)
-    for e, lab in ((-16, "1e-16"), (-8, "1e-8"), (0, "1")):
+    ticks = ((-16, "1e-16"), (-12, "1e-12"), (-8, "1e-8"), (-4, "1e-4"), (0, "1")) if tall else \
+        ((-16, "1e-16"), (-8, "1e-8"), (0, "1"))
+    for e, lab in ticks:
         f.line([(px0 + 4, Y(e)), (px1, Y(e))], HUDC, width=0.8, alpha=0.22 * a)
         f.text(lab, px0 - 16, Y(e), style="hud", alpha=a, anchor="rm")
     for s in (0, 5, 10, 15, 20):

@@ -17,7 +17,12 @@
 
 Series style: `../../simtheory-style/` (fonts bundled there). Requires `pip install numpy scipy numba pillow` and ffmpeg.
 
-Rebuild (~25 min on 4 cores):
+Two layouts from the same code (`SIM_LAYOUT`), both in the kit's look. Rebuild (~15 min per version on 4 cores):
 ```bash
-python3 simulate.py && python3 audio.py && python3 render.py --video build/simtheory_02_reverse_chaos.mp4 --audio build/mix.wav && python3 qa.py build/simtheory_02_reverse_chaos.mp4 build/qa
+python3 simulate.py && python3 audio.py
+# YouTube Shorts: full 9:16 frame, avoids only the Shorts UI (right 15 %, bottom 20 %)
+SIM_LAYOUT=youtube python3 render.py --video build/simtheory_02_reverse_chaos_youtube.mp4 --audio build/mix.wav
+# Instagram: kit square-safe layout (survives the square / 4:5 / 3:4 crops and the Reels UI)
+SIM_LAYOUT=square python3 render.py --video build/simtheory_02_reverse_chaos_instagram.mp4 --audio build/mix.wav
+python3 qa.py build/simtheory_02_reverse_chaos_youtube.mp4 build/qa_youtube
 ```

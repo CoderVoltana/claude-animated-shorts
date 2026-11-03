@@ -44,13 +44,13 @@ The two curves stay parallel, about e⁸ ≈ 3,000× apart. That is roughly the 
 - The graph's CYAN curve starts from 10⁻¹⁶ (axis floor, exactly zero error) and the data proper starts at ~4×10⁻¹⁵ rad. ORANGE starts at 1.7×10⁻¹² rad (= 10⁻¹⁰°).
 
 ## Look (series style kit)
-Everything is drawn with `simtheory-style/simtheory_style.py` v1.0.0: colour roles (ghost = reference white `#F4F7FF`, cyan = main `#22E5FF`, orange = perturbed `#FF8A1E`, arrows = extra 1 purple `#A848FF`, HUD/axes = `hud`), the kit's bloom and roll-off, its line/trail/bob sizes, its fonts and text styles (captions in `headline`, readouts in `hud`/`label`) and its `SIM #02` tag. The kit layout is scaled to 1440×2560 (×4/3): text on `text_y`, the readout and graph in `hud_band`, and the pivot placed so that the full 2 m reach stays inside the square-safe zone and left of the Shorts UI column. The sim-time counter is removed. The HUD shows direction and playback speed only.
+Everything is drawn with `simtheory-style/simtheory_style.py` v1.0.0: colour roles (ghost = reference white `#F4F7FF`, cyan = main `#22E5FF`, orange = perturbed `#FF8A1E`, arrows = extra 1 purple `#A848FF`, HUD/axes = `hud`), the kit's bloom and roll-off, its line/trail/bob sizes, its fonts and text styles (captions in `headline`, readouts in `hud`/`label`) and its `SIM #02` tag. Two layouts. **Instagram (square):** the kit layout scaled to 1440×2560 (×4/3): text on `text_y`, the readout and graph in `hud_band`, and the pivot placed so that the full 2 m reach stays inside the square-safe zone and left of the Shorts UI column. **YouTube (full screen):** the whole 9:16 frame minus the Shorts UI. The tag and HUD are at the top, captions in the upper-middle third, the graph in the upper-middle area, and the pendulum larger (272 px/m against 240). The sim-time counter is removed in both. The HUD shows direction and playback speed only.
 
 Export follows the kit's colour standard (BT.709 matrix, tv range, BT.709 tags, verified with `check_export`). It differs from the kit in two documented ways, both required by the brief:
 - **Bitrate.** A CRF 6 kit master is re-encoded YUV→YUV at CRF 9, about 46 Mb/s. The kit's CRF 15 gave about 5 Mb/s.
 - **Audio.** The mastered mix is muxed directly. The kit's single-pass loudnorm had pushed it to −12.3 LUFS and halved its dynamic range.
 
-## Delivery QA (`build/qa/qa.json`)
+## Delivery QA, Instagram / square-safe version (`build/qa_instagram/qa.json`)
 | Check | Result |
 |---|---|
 | Video | H.264 High, 1440×2560, 60/1 fps, yuv420p, BT.709 / tv tags, 1800 frames, 30.0 s, **46.1 Mb/s** |
@@ -59,4 +59,14 @@ Export follows the kit's colour standard (BT.709 matrix, tv range, BT.709 tags, 
 | Loop seam (audio) | last→first sample jump 0.0017 (median sample step 0.0045): no click |
 | Loop seam (video) | first vs last frame PSNR 50 dB, mean abs diff 0.37/255. The only difference is the kit's per-frame dither |
 | Right 15 % / bottom 20 % | 0 content pixels (> 96/255) in any frame. Only the kit's nebula backdrop and faint bloom reach those zones |
+| Frozen spans while moving | none |
+
+## Delivery QA, YouTube full-screen version (`build/qa_youtube/qa.json`)
+| Check | Result |
+|---|---|
+| Video | H.264 High, 1440×2560, 60/1 fps, yuv420p, BT.709 / tv tags, 1800 frames, 30.0 s, **42.7 Mb/s** |
+| Loudness | **−14.0 LUFS**, true peak **−1.7 dBTP**, LRA 8.0 LU (same mix) |
+| Loop seam (video) | PSNR 50 dB (kit dither only) |
+| Right 15 % | 0 content pixels |
+| Bottom 20 % | at most 56 glow pixels (> 96/255) in one frame. This is the bloom halo of the lower bob at its lowest point. The bob core stays above y ≈ 2033 |
 | Frozen spans while moving | none |
