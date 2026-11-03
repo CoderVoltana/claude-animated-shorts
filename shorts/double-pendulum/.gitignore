@@ -2,3 +2,4 @@ sim.bin
 sim.json
 score.wav
 __pycache__/
+score_cold.wav

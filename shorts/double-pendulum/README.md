@@ -12,6 +12,15 @@ It has a neon-on-black look and loops seamlessly.
 | 17–22 s | Reveal | Flash and shockwave. The faint cyan → blue → purple ensemble bursts apart while 5 tracked members (orange, yellow, green, pink, white) trace bright paths on top. "CHAOS. Deterministic. Yet unpredictable." A legend gives each tracked member's starting θ₂. |
 | 22.2–24 s | Loop | Time runs backward (the equations are time-reversible). The 500 reunite into one pendulum, and the last frame leads into frame 0. |
 
+## Variant: cold open (`out/double_pendulum_chaos_coldopen.mp4`, 23.2 s)
+| Time | Beat |
+|---|---|
+| 0–0.5 s | Flash-forward: the chaotic swarm plays on, continuing the video's final frame. |
+| 0.5–1.0 s | Flash cut, then time runs backward at high speed. The 500 reconverge into the start pose: "HOW DID THIS HAPPEN?" |
+| 1.0–23.2 s | The same story shifted by 1 s (reveal at 18 s). It ends mid-chaos and runs straight into frame 0, so the loop is seamless. |
+
+Build with `VARIANT=cold node render.mjs frames <dir> 4` and `python3 audio.py cold` (writes `score_cold.wav`).
+
 ## Science
 - `sim.py` integrates the exact equations of motion for two point masses (1 kg) on massless rigid 1 m rods with frictionless hinges and g = 9.81 m/s². It uses classical RK4 in float64 with h = 1/2400 s.
 - Start: θ₁ = 140°, θ₂ = 175° + i · 10⁻⁹° for i = 0…499, both at rest.

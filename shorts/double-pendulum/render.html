@@ -18,8 +18,23 @@
 // Every frame is a pure function of n, so frames can render in parallel.
 // ---------------------------------------------------------------------------
 const W = 1080, H = 1920, FPS = 60;
-const T_END = 24.0;          // video length (s)
-const T_REWIND = 22.2;       // physics runs forward until here, then rewinds to t=0
+// Variants:
+//   default : 24 s. Story from rest; ends by rewinding time back to the start pose.
+//   ?v=cold : 23.2 s cold open. 0-0.5 s flash-forward of the chaos (continuing the final
+//             frame), 0.5-1.0 s rewind to the start pose ("HOW DID THIS HAPPEN?"), then the
+//             story, which ends mid-chaos and loops back into frame 0.
+const COLD = new URLSearchParams(location.search).get("v") === "cold";
+const COLD_FLASH = 0.5, COLD_REW = 0.5, COLD_OFF = COLD_FLASH + COLD_REW;
+const T_REWIND = 22.2;       // physics runs forward until here (story time)
+const T_END = COLD ? T_REWIND + COLD_OFF : 24.0;   // video length (s)
+let TAU_MAX = T_REWIND;      // last physics time available (set from sim.json)
+let VT = 0;                  // current video time (for loop-periodic background motion)
+// video time -> story time (story time t is what every timeline below is keyed to)
+function storyT(T) {
+  if (!COLD) return T;
+  if (T < COLD_FLASH) return T_REWIND + T;   // flash-forward: continues the final frame
+  return T - COLD_OFF;                       // rewind segment is t in [-0.5, 0)
+}
 const T_REVEAL = 17.0;
 const L1 = 1.0, L2 = 1.0;    // must match sim.py
 
@@ -68,6 +83,10 @@ const colOf = i => HLCOL[i] || BUCKET_COL[Math.floor(i * NB / N)];
 
 // ---------- time mapping: video time t -> physics time tau ----------
 function tau(t) {
+  if (COLD) {
+    if (t < 0) return (T_REWIND + COLD_FLASH) * (1 - s5((t + COLD_REW) / COLD_REW));
+    return t;
+  }
   if (t <= 0) return 0;
   if (t <= T_REWIND) return t;
   const u = (t - T_REWIND) / (T_END - T_REWIND);
@@ -105,6 +124,11 @@ const CAM = [
   { t: 22.2, s: 220, x: 540, y: 970, r: 1.8 },
 ];
 function camAt(t) {
+  if (COLD && t >= T_REWIND) { const a = CAM[CAM.length - 1]; return { s: a.s, x: a.x, y: a.y, r: a.r }; }
+  if (COLD && t < 0) {
+    const a = CAM[CAM.length - 1], b = CAM[0], u = s5((t + COLD_REW) / COLD_REW);
+    return { s: lerp(a.s, b.s, u), x: lerp(a.x, b.x, u), y: lerp(a.y, b.y, u), r: lerp(a.r, b.r, u) };
+  }
   if (t >= T_REWIND) {            // glide back to the opening framing in step with the rewind
     const a = CAM[CAM.length - 1], b = CAM[0], u = s5((t - T_REWIND) / (T_END - T_REWIND));
     return { s: lerp(a.s, b.s, u), x: lerp(a.x, b.x, u), y: lerp(a.y, b.y, u), r: lerp(a.r, b.r, u) };
@@ -164,7 +188,7 @@ function drawBackground(t, cam, energy) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   for (const d of DUST) {
     // every motion is periodic in T_END so the loop is seamless
-    const LP = 2 * Math.PI * t / T_END;
+    const LP = 2 * Math.PI * VT / T_END;
     const wx = d.x + 0.06 * Math.sin(LP * 2 + d.ph), wy = d.y + 0.3 * d.sp * Math.sin(LP + d.ph);
     const yy = ((wy % 11) + 16.5) % 11 - 5.5;
     const sx = cam.x + (wx * cam.s) * d.z * 1.1, sy = cam.y + (yy * cam.s) * d.z * 1.1;
@@ -184,13 +208,15 @@ let REP = 250;   // representative member (the middle of the ensemble; from sim.
 // current state (ahead of it in tau while time runs backward). The span shrinks to
 // zero at the loop point so the final frame matches frame 0 (no trail).
 function trailWin(t, base) {
+  if (COLD) return t < 0 ? base * (1 - sstep(-0.3, 0, t)) : base;
   return base * (1 - sstep(23.0, T_END, t));
 }
+const runsBackward = t => tau(t) < tau(t - 1e-3);
 function trailPoints(i, t, span, K) {
   const pts = new Float32Array(K * 2);
-  const tt = tau(t), dir = t > T_REWIND ? 1 : -1;
+  const tt = tau(t), dir = runsBackward(t) ? 1 : -1;
   for (let j = 0; j < K; j++) {
-    const tj = clamp(tt + dir * span * (K - 1 - j) / (K - 1), 0, T_REWIND);
+    const tj = clamp(tt + dir * span * (K - 1 - j) / (K - 1), 0, TAU_MAX);
     const p = joints(i, tj);
     pts[2 * j] = p[2]; pts[2 * j + 1] = p[3];
   }
@@ -223,8 +249,8 @@ function drawSingle(t, cam, alpha) {
   const K1 = 40, w1 = 0.5;
   ctx.beginPath();
   const w1r = trailWin(t, w1);
-  const dir1 = t > T_REWIND ? 1 : -1;
-  for (let j = 0; j < K1; j++) { const p = joints(REP, clamp(tt + dir1 * w1r * (K1 - 1 - j) / (K1 - 1), 0, T_REWIND)); j ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+  const dir1 = runsBackward(t) ? 1 : -1;
+  for (let j = 0; j < K1; j++) { const p = joints(REP, clamp(tt + dir1 * w1r * (K1 - 1 - j) / (K1 - 1), 0, TAU_MAX)); j ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
   ctx.strokeStyle = `rgba(168,72,255,${alpha * 0.35})`; ctx.lineWidth = 3 * px; ctx.stroke();
   // rods
   for (const [w, a] of [[14, 0.10], [7, 0.22], [3.2, 0.95]]) {
@@ -431,7 +457,7 @@ function drawInset(t, cam) {
     for (let i = b * per; i < (b + 1) * per; i++) {
       if (HLCOL[i]) continue;
       for (let j = 0; j < K; j++) {
-        const tj = clamp(tt - prev * (K - 1 - j) / (K - 1), 0, T_REWIND);
+        const tj = clamp(tt - prev * (K - 1 - j) / (K - 1), 0, TAU_MAX);
         const p = joints(i, tj), q = joints(REP, tj);
         const dx = (p[2] - q[2]) * zoom, dy = (p[3] - q[3]) * zoom;
         const sx = INS.x + dx * cs - dy * sn, sy = INS.y + dx * sn + dy * cs;
@@ -445,7 +471,7 @@ function drawInset(t, cam) {
   for (const h of HL) {
     ctx.beginPath();
     for (let j = 0; j < K; j++) {
-      const [sx, sy] = insetPos(h.i, clamp(tt - prev * (K - 1 - j) / (K - 1), 0, T_REWIND));
+      const [sx, sy] = insetPos(h.i, clamp(tt - prev * (K - 1 - j) / (K - 1), 0, TAU_MAX));
       j ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy);
     }
     ctx.strokeStyle = rgba(h.c, 0.7 * a); ctx.lineWidth = 2.5; ctx.stroke();
@@ -587,8 +613,13 @@ const rise = (t, a, d = 0.45) => (1 - easeOut((t - a) / d)) * 36;
 
 function drawText(t) {
   const TY = 330;
-  // HOOK
-  {
+  // HOOK (cold open): asked while the chaos rewinds to its start
+  if (COLD) {
+    const a1 = inOut(t, -0.45, 2.05, 0.15, 0.3), a2 = inOut(t, -0.3, 2.05, 0.15, 0.3);
+    const sc1 = lerp(1.25, 1, easeOutBack((t + 0.45) / 0.4)), sc2 = lerp(1.25, 1, easeOutBack((t + 0.3) / 0.4));
+    txt("HOW DID", 540, TY - 60, { size: 108, weight: 900, alpha: a1, scale: sc1, ls: 4, glow: "rgba(0,220,255,0.55)" });
+    txt("THIS HAPPEN?", 540, TY + 56, { size: 116, weight: 900, alpha: a2, scale: sc2, ls: 2, grad: ["#00f0ff", "#4a8bff", "#a848ff"], glow: "rgba(120,90,255,0.8)", glowSize: 40 });
+  } else {
     const a1 = inOut(t, 0.1, 2.05, 0.18, 0.3), a2 = inOut(t, 0.32, 2.05, 0.18, 0.3);
     const sc1 = lerp(1.25, 1, easeOutBack((t - 0.1) / 0.4)), sc2 = lerp(1.25, 1, easeOutBack((t - 0.32) / 0.4));
     txt("CAN YOU", 540, TY - 60, { size: 104, weight: 900, alpha: a1, scale: sc1, ls: 4, glow: "rgba(0,220,255,0.55)" });
@@ -615,7 +646,7 @@ function drawText(t) {
     txt("…for now.", 540, TY + rise(t, 14.2), { size: 96, weight: 900, alpha: inOut(t, 14.2, 16.85, 0.25, 0.2), scale: beat, color: "#ffd2a0", glow: "rgba(255,120,30,0.75)", glowSize: 40 });
   }
   // LOOP: time runs backward and the ensemble reunites
-  {
+  if (!COLD) {
     const a = inOut(t, 22.35, 23.55, 0.15, 0.35);
     txt("◀◀  TIME REVERSED", 540, TY, { size: 40, weight: 700, family: "'JetBrains Mono'", ls: 6, alpha: a * (0.75 + 0.25 * Math.sin(t * 30)), color: "#9ff4ff", glow: "rgba(0,220,255,0.7)" });
   }
@@ -652,14 +683,17 @@ function vignette() {
 
 // ---------- frame ----------
 function renderFrame(n) {
-  const t = n / FPS;
+  VT = n / FPS;
+  const t = storyT(VT);
   const cam = camAt(t);
   const tt = tau(t);
   const { env } = spreadAt(tt);
   const sepPx = env * cam.s;
   // single crisp pendulum until the ensemble visibly separates, then the whole swarm
   const swarm = sstep(1.2, 7, sepPx);
-  const energy = sstep(T_REVEAL - 0.1, T_REVEAL + 0.4, t) * (1 - sstep(T_REWIND + 0.4, T_END - 0.2, t));
+  const energy = COLD
+    ? (t < 0 ? 1 - sstep(-0.5, -0.2, t) : sstep(T_REVEAL - 0.1, T_REVEAL + 0.4, t))
+    : sstep(T_REVEAL - 0.1, T_REVEAL + 0.4, t) * (1 - sstep(T_REWIND + 0.4, T_END - 0.2, t));
   drawBackground(t, cam, energy);
   ctx.globalCompositeOperation = "lighter";
   drawSingle(t, cam, 1 - swarm);
@@ -690,6 +724,13 @@ function renderFrame(n) {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = "source-over";
   }
+  if (COLD && t >= -COLD_REW && t < -COLD_REW + 0.3) {   // flash on the cut into the rewind
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = `rgba(200,235,255,${0.7 * Math.exp(-(t + COLD_REW) / 0.06)})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "source-over";
+  }
   vignette();
   drawInset(t, cam);
   drawGraph(t);
@@ -699,7 +740,7 @@ function renderFrame(n) {
 
 async function init() {
   META = await (await fetch("sim.json")).json();
-  N = META.n; S = META.samples; RATE = META.rate; REP = META.rep;
+  N = META.n; S = META.samples; RATE = META.rate; REP = META.rep; TAU_MAX = (S - 1) / RATE;
   SPREAD = { env: META.env, deg: META.deg };
   const buf = await (await fetch("sim.bin")).arrayBuffer();
   REPA = new Float64Array(buf, 0, S * 2);

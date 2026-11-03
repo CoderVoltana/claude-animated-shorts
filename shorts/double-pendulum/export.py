@@ -8,7 +8,7 @@ import json, numpy as np
 from sim import run, tip
 
 TH1, TH2, DELTA, N = 140.0, 175.0, 1e-9, 500    # degrees
-T = 22.35; RATE = 240; REP = 250
+T = 22.9; RATE = 240; REP = 250    # covers the cold-open flash (to 22.7 s)
 
 out, drift = run(TH1, TH2, DELTA, N, T, rate=RATE, sub=10)   # h = 1/2400 s
 print("max energy drift (J):", drift)
