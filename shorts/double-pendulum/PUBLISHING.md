@@ -29,3 +29,4 @@ Simulated with the exact equations of motion (RK4, energy conserved to 10⁻⁹ 
 ## Instagram
 `out/thumbnails/instagram_post_4x5.png`: 1080x1350 (4:5 portrait, the largest feed format).
 It's a crop of the clean 19.6 s render. The profile grid's 3:4 crop trims about 34 px per side, and the title stays clear of it.
+`out/thumbnails/instagram_reel_cover.png`: 1080x1920 Reel cover. The profile grid shows Reels as a centred 3:4 crop (1080x1440, trimming 240 px at top and bottom), so the title and disc are moved into that band (content y 373–1547).
