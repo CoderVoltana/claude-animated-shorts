@@ -1,6 +1,7 @@
-video: h264 High L51 1440x2560 60/1 fps yuv420p 14.2 Mb/s, 1800 frames, 30.000 s
-audio: aac 48000 Hz 2 ch 315 kb/s, 30.000 s
-file: 54.5 MB, duration 30.000 s
-loudness (ffmpeg ebur128, decoded AAC): integrated -14.1 LUFS, true peak -1.3 dBTP -> PASS
-loop: first vs last frame mean |diff| = 0.268 / 255 (one frame of field drift)
-safe area: brightest pixel outside the central safe box over 60 sampled frames = 38/255 -> PASS
+video: h264 High L51 1440x2560 60/1 fps yuv420p 4.7 Mb/s, 1800 frames, 30.000 s
+audio: aac 48000 Hz 2 ch 258 kb/s, 30.000 s
+file: 18.7 MB, duration 30.000 s
+loudness (ffmpeg ebur128, decoded AAC): integrated -14.1 LUFS, true peak -1.9 dBTP -> PASS
+loop: first vs last frame mean |diff| = 0.337 / 255 (one frame of field drift)
+colour tags (kit check_export): {'width': '1440', 'height': '2560', 'pix_fmt': 'yuv420p', 'color_range': 'tv', 'color_space': 'bt709', 'color_transfer': 'bt709', 'color_primaries': 'bt709', 'r_frame_rate': '60/1'}
+safe area: brightest pixel outside the central safe box over 60 sampled frames (above backdrop) = 12/255 -> PASS
