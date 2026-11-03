@@ -25,6 +25,10 @@ const W = 1080, H = 1920, FPS = 60;
 //             story, which ends mid-chaos and loops back into frame 0.
 const COLD = new URLSearchParams(location.search).get("v") === "cold";
 const CLEAN = new URLSearchParams(location.search).has("clean");   // thumbnails: no HUD, no sublines
+// ?ig=1 : Instagram-safe layout. Every element stays inside the central 1:1 square (y 420-1500),
+// so it survives Instagram's square crop as well as the 4:5 feed crop, the 3:4 profile grid
+// and the full-screen 9:16 Reels view.
+const IG = new URLSearchParams(location.search).has("ig");
 const COLD_FLASH = 0.5, COLD_REW = 0.5, COLD_OFF = COLD_FLASH + COLD_REW;
 const T_REWIND = 22.2;       // physics runs forward until here (story time)
 const T_END = COLD ? T_REWIND + COLD_OFF : 24.0;   // video length (s)
@@ -124,6 +128,10 @@ const CAM = [
   { t: 19.2, s: 212, x: 540, y: 975, r: 3.5 },
   { t: 22.2, s: 220, x: 540, y: 970, r: 1.8 },
 ];
+if (IG) {   // same key times, framing scaled into the square's middle band
+  const SQ = [[212, 1075], [200, 1065], [168, 990], [176, 985], [168, 992], [140, 1022], [146, 1018]];
+  CAM.forEach((k, i) => { k.s = SQ[i][0]; k.y = SQ[i][1]; });
+}
 function camAt(t) {
   if (COLD && t >= T_REWIND) { const a = CAM[CAM.length - 1]; return { s: a.s, x: a.x, y: a.y, r: a.r }; }
   if (COLD && t < 0) {
@@ -413,7 +421,7 @@ function drawAngles(t, cam) {
 }
 
 // ---------- magnifier inset (8.8-16 s): the 1,000 tips at extreme zoom ----------
-const INS = { x: 178, y: 1545, r: 128 };
+const INS = IG ? { x: 150, y: 1386, r: 84, fs: 24, ly: 6 } : { x: 178, y: 1545, r: 128, fs: 32, ly: 14 };
 function drawInset(t, cam) {
   const tt = tau(t);
   const { env } = spreadAt(tt);
@@ -485,13 +493,17 @@ function drawInset(t, cam) {
   ctx.strokeStyle = `rgba(0,230,255,${0.9 * a})`; ctx.lineWidth = 3;
   ctx.shadowColor = "rgba(0,230,255,0.9)"; ctx.shadowBlur = 16; ctx.stroke(); ctx.shadowBlur = 0;
   // zoom readout
-  ctx.font = "700 32px 'JetBrains Mono'"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.font = `700 ${INS.fs}px 'JetBrains Mono'`; ctx.textAlign = "center"; ctx.textBaseline = "top";
   ctx.fillStyle = `rgba(230,250,255,${a})`;
-  ctx.fillText("ZOOM ×" + Math.round(mag).toLocaleString("en-US"), INS.x, INS.y + INS.r + 14);
+  ctx.fillText("ZOOM ×" + Math.round(mag).toLocaleString("en-US"), INS.x, INS.y + INS.r + INS.ly);
 }
 
 // ---------- spread graph (9.4-18.6 s): log scale, the signature of chaos ----------
-const GR = { x0: 450, x1: 930, y0: 1500, y1: 1640, tMax: 18, lo: -6.5, hi: 2.8 };
+// tdy: title offset, btop/bbot: panel padding, vdy/vs: live value offset/size, tl: time label offset, sat: tag offset
+const GR = IG ? { x0: 420, x1: 930, y0: 1408, y1: 1476, tMax: 18, lo: -6.5, hi: 2.8, tdy: 46, btop: 74, bbot: 24, vdy: 12, vs: 36, tl: 18, sat: 50, gfs: 17,
+                  grid: [[0.000001, "10⁻⁶°"], [0.001, "10⁻³°"], [360, "360°"]] }
+           : { x0: 450, x1: 930, y0: 1500, y1: 1640, tMax: 18, lo: -6.5, hi: 2.8, tdy: 72, btop: 112, bbot: 38, vdy: 26, vs: 44, tl: 28, sat: 80, gfs: 21,
+                  grid: [[0.000001, "10⁻⁶°"], [0.001, "10⁻³°"], [1, "1°"], [360, "360°"]] };
 function fmtDeg(d) {
   if (d >= 10) return d.toFixed(0) + "°";
   if (d >= 1) return d.toFixed(1) + "°";
@@ -511,21 +523,21 @@ function drawGraph(t) {
   ctx.translate(gcx, gcy + 60 * ex * ex); ctx.scale(1 - 0.08 * ex, 1 - 0.08 * ex); ctx.translate(-gcx, -gcy);
   ctx.globalCompositeOperation = "source-over";
   ctx.fillStyle = `rgba(3,6,18,${0.6 * a})`;
-  ctx.fillRect(GR.x0 - 100, GR.y0 - 112, GR.x1 - GR.x0 + 116, GR.y1 - GR.y0 + 150);
+  ctx.fillRect(GR.x0 - 100, GR.y0 - GR.btop, GR.x1 - GR.x0 + 116, GR.y1 - GR.y0 + GR.btop + GR.bbot);
   ctx.font = "600 24px 'JetBrains Mono'"; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
   ctx.fillStyle = `rgba(150,210,255,${0.85 * a})`;
-  ctx.fillText("SPREAD · LOG SCALE", GR.x0 - 84, GR.y0 - 72);
+  ctx.fillText("SPREAD · LOG SCALE", GR.x0 - 84, GR.y0 - GR.tdy);
   // grid lines
   ctx.lineWidth = 1;
-  for (const [d, lab] of [[0.000001, "10⁻⁶°"], [0.001, "10⁻³°"], [1, "1°"], [360, "360°"]]) {
+  for (const [d, lab] of GR.grid) {
     const y = gy(d);
     ctx.strokeStyle = `rgba(80,140,220,${0.25 * a})`; ctx.beginPath(); ctx.moveTo(GR.x0, y); ctx.lineTo(GR.x1, y); ctx.stroke();
-    ctx.fillStyle = `rgba(120,170,230,${0.8 * a})`; ctx.font = "500 21px 'JetBrains Mono'"; ctx.textAlign = "right";
+    ctx.fillStyle = `rgba(120,170,230,${0.8 * a})`; ctx.font = `500 ${GR.gfs}px 'JetBrains Mono'`; ctx.textAlign = "right";
     ctx.fillText(lab, GR.x0 - 12, y + 6);
   }
   ctx.strokeStyle = `rgba(120,180,255,${0.5 * a})`; ctx.beginPath(); ctx.moveTo(GR.x0, GR.y0 - 6); ctx.lineTo(GR.x0, GR.y1); ctx.lineTo(GR.x1, GR.y1); ctx.stroke();
   ctx.textAlign = "right"; ctx.fillStyle = `rgba(120,170,230,${0.7 * a})`;
-  ctx.font = "500 21px 'JetBrains Mono'"; ctx.fillText("time →", GR.x1, GR.y1 + 28);
+  ctx.font = `500 ${GR.gfs}px 'JetBrains Mono'`; ctx.fillText("time →", GR.x1, GR.y1 + GR.tl);
   // curve: wipe-in of the history, then live
   const reveal = s5((t - 9.4) / 0.9);
   const tLive = Math.min(tt, GR.tMax) * reveal + 0 * (1 - reveal);
@@ -548,18 +560,18 @@ function drawGraph(t) {
   ctx.beginPath(); ctx.arc(hx, hy, 6, 0, 6.2832); ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fill();
   // live value
   ctx.globalCompositeOperation = "source-over";
-  ctx.textAlign = "right"; ctx.font = "700 44px 'JetBrains Mono'";
+  ctx.textAlign = "right"; ctx.font = `700 ${GR.vs}px 'JetBrains Mono'`;
   const hot = sstep(13.5, 16.5, tt);
   ctx.fillStyle = `rgba(${Math.round(lerp(120, 255, hot))},${Math.round(lerp(240, 170, hot))},${Math.round(lerp(255, 60, hot))},${a})`;
   ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14;
-  ctx.fillText(fmtDeg(dNow), GR.x1, GR.y0 - 26);
+  ctx.fillText(fmtDeg(dNow), GR.x1, GR.y0 - GR.vdy);
   ctx.shadowBlur = 0;
   // ceiling reached: the members now point every which way
   const sat = sstep(300, 340, dNow);
   if (sat > 0) {
     ctx.font = "700 22px 'JetBrains Mono'"; ctx.textAlign = "right"; ctx.letterSpacing = "3px";
     ctx.fillStyle = `rgba(255,150,40,${a * sat * (0.65 + 0.35 * Math.sin(t * 18))})`;
-    ctx.fillText("SATURATED", GR.x1 - 4, GR.y0 - 80);
+    ctx.fillText("SATURATED", GR.x1 - 4, GR.y0 - GR.sat);
     ctx.letterSpacing = "0px";
   }
 }
@@ -570,8 +582,8 @@ function drawLegend(t) {
   if (a0 <= 0.003) return;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = "source-over";
-  const x = 380, y0 = 1452;
-  ctx.fillStyle = `rgba(3,6,18,${0.55 * a0})`; ctx.fillRect(x - 40, y0 - 44, 400, 248);
+  const x = 380, y0 = IG ? 1336 : 1452, step = IG ? 29 : 38, fs = IG ? 24 : 28;
+  ctx.fillStyle = `rgba(3,6,18,${0.55 * a0})`; ctx.fillRect(x - 40, y0 - 44, 400, IG ? 194 : 248);
   ctx.textBaseline = "middle"; ctx.textAlign = "left";
   ctx.font = "600 22px 'JetBrains Mono'"; ctx.letterSpacing = "2px";
   ctx.fillStyle = `rgba(150,210,255,${0.85 * a0})`;
@@ -579,10 +591,10 @@ function drawLegend(t) {
   ctx.letterSpacing = "0px";
   HL.forEach((h, k) => {
     const a = a0 * sstep(18.9 + 0.12 * k, 19.25 + 0.12 * k, t);
-    const y = y0 + 26 + k * 38 + (1 - a / Math.max(a0, 1e-6)) * 14;
+    const y = y0 + (IG ? 22 : 26) + k * step + (1 - a / Math.max(a0, 1e-6)) * 14;
     ctx.beginPath(); ctx.arc(x, y, 9, 0, 6.2832);
     ctx.fillStyle = rgba(h.c, a); ctx.shadowColor = rgba(h.c, 0.9); ctx.shadowBlur = 14; ctx.fill(); ctx.shadowBlur = 0;
-    ctx.font = "600 28px 'JetBrains Mono'"; ctx.fillStyle = rgba(h.c, a);
+    ctx.font = `600 ${fs}px 'JetBrains Mono'`; ctx.fillStyle = rgba(h.c, a);
     ctx.fillText((META.theta2 + h.i * META.delta_deg).toFixed(8) + "°", x + 26, y + 1);
   });
 }
@@ -613,7 +625,8 @@ const inOut = (t, a, b, fi = 0.25, fo = 0.3) => sstep(a, a + fi, t) * (1 - sstep
 const rise = (t, a, d = 0.45) => (1 - easeOut((t - a) / d)) * 36;
 
 function drawText(t) {
-  const TY = 330;
+  const TY = IG ? 566 : 330;
+  const SUB1 = IG ? 104 : 120, SUB2 = IG ? 160 : 186, SUBS = IG ? 46 : 52;
   // HOOK (cold open): asked while the chaos rewinds to its start
   if (COLD) {
     const a1 = inOut(t, -0.45, 2.05, 0.15, 0.3), a2 = inOut(t, -0.3, 2.05, 0.15, 0.3);
@@ -656,8 +669,8 @@ function drawText(t) {
     const a = inOut(t, 17.05, 21.95, 0.12, 0.45);
     const sc = lerp(1.6, 1, easeOutBack((t - 17.05) / 0.5)) * (1 + 0.015 * (t - 17));
     txt("CHAOS", 540, TY - 10, { size: 196, weight: 900, alpha: a, scale: sc, ls: 18, grad: ["#00f0ff", "#4a8bff", "#a848ff", "#ff48be", "#ff961e"], glow: "rgba(150,90,255,0.85)", glowSize: 60 });
-    if (!CLEAN) txt("Deterministic.", 540, TY + 120 + rise(t, 18.2), { size: 52, weight: 700, family: "'Inter'", alpha: inOut(t, 18.2, 21.95, 0.25, 0.45), color: "#8ff6ff", glow: "rgba(0,220,255,0.6)" });
-    if (!CLEAN) txt("Yet unpredictable.", 540, TY + 186 + rise(t, 19.1), { size: 52, weight: 700, family: "'Inter'", alpha: inOut(t, 19.1, 21.95, 0.25, 0.45), color: "#ffb15c", glow: "rgba(255,140,30,0.6)" });
+    if (!CLEAN) txt("Deterministic.", 540, TY + SUB1 + rise(t, 18.2), { size: SUBS, weight: 700, family: "'Inter'", alpha: inOut(t, 18.2, 21.95, 0.25, 0.45), color: "#8ff6ff", glow: "rgba(0,220,255,0.6)" });
+    if (!CLEAN) txt("Yet unpredictable.", 540, TY + SUB2 + rise(t, 19.1), { size: SUBS, weight: 700, family: "'Inter'", alpha: inOut(t, 19.1, 21.95, 0.25, 0.45), color: "#ffb15c", glow: "rgba(255,140,30,0.6)" });
   }
 }
 

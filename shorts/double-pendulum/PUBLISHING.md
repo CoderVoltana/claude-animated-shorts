@@ -29,4 +29,8 @@ Simulated with the exact equations of motion (RK4, energy conserved to 10⁻⁹ 
 ## Instagram
 `out/thumbnails/instagram_post_4x5.png`: 1080x1350 (4:5 portrait, the largest feed format).
 It's a crop of the clean 19.6 s render. The profile grid's 3:4 crop trims about 34 px per side, and the title stays clear of it.
-`out/thumbnails/instagram_reel_cover.png`: 1080x1920 Reel cover. The profile grid shows Reels as a centred 3:4 crop (1080x1440, trimming 240 px at top and bottom), so the title and disc are moved into that band (content y 373–1547).
+`out/thumbnails/instagram_reel_cover.png`: 1080x1920 Reel cover, rendered with the square-safe layout (`IG=1 CLEAN=1`). Content runs from y 466 to 1347, inside the centred 1:1 crop.
+
+### Instagram Reel video
+Upload `out/double_pendulum_chaos_instagram.mp4`, not the YouTube file. It's the same 24 s short, but every element stays inside the centred 1080x1080 square (y 420–1500). It survives Instagram's square crop, the 4:5 feed, the 3:4 grid and full-screen 9:16 with its UI overlays.
+Render it with `IG=1 node render.mjs frames <dir> 4`.

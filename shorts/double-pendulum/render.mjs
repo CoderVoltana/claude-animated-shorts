@@ -21,6 +21,7 @@ await new Promise(r => server.listen(0, "127.0.0.1", r));
 const QS = new URLSearchParams();
 if (process.env.VARIANT) QS.set("v", process.env.VARIANT);
 if (process.env.CLEAN) QS.set("clean", "1");          // thumbnails: no HUD, no sublines
+if (process.env.IG) QS.set("ig", "1");                // Instagram-safe 4:5 layout
 const URL_ = `http://127.0.0.1:${server.address().port}/render.html${QS.size ? "?" + QS : ""}`;
 
 const [mode, outDir, a3, a4, a5] = process.argv.slice(2);
