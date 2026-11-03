@@ -1,0 +1,9 @@
+video: h264 High L51 1440x2560 60/1 fps yuv420p 6.1 Mb/s, 1800 frames, 30.000 s
+audio: aac 48000 Hz 2 ch 258 kb/s, 30.000 s
+file: 23.8 MB, duration 30.000 s
+loudness (ffmpeg ebur128, decoded AAC): integrated -14.1 LUFS, true peak -1.9 dBTP -> PASS
+loop: first vs last frame mean |diff| = 0.492 / 255 (one frame of field drift)
+colour tags (kit check_export): {'width': '1440', 'height': '2560', 'pix_fmt': 'yuv420p', 'color_range': 'tv', 'color_space': 'bt709', 'color_transfer': 'bt709', 'color_primaries': 'bt709', 'r_frame_rate': '60/1'}
+safe area: brightest pixel outside the safe box (full layout) over 60 sampled frames (above backdrop) = 214/255 -> CHECK
+note: the only pixels inside the 5 % edge margin are the orange bob and its sync ring on the right (x <= 1395 of 1440),
+at the 14.5 s sync flash and around the push-in peak (19-21.5 s, bob dimmed to 20 %); nothing is clipped, all text is inside.
