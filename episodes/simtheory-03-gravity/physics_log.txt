@@ -1,0 +1,12 @@
+RK4 dt = 0.5 ms, release 20.000 deg from rest, L = 1 m, no damping
+EARTH  g= 9.81  T_sim = 2.021451 s  (mean of 6 = 2.021451, elliptic ref 2.021451, small-angle 2.006067)
+10x    g=98.10  T_sim = 0.639239 s  (mean of 20 = 0.639239, elliptic ref 0.639239, small-angle 0.634374)
+ratio T_E/T_H = 3.162278  (sqrt 10 = 3.162278)  -> 3.162 +/- 0.005: PASS
+6th Earth return  = 12.128708 s
+19th 10x return   = 12.145541 s
+sync (later of the two) = 12.145541 s sim time, mismatch 16.83 ms = 0.139%  -> < 0.2%: PASS
+angles at sync: Earth 19.9728 deg, 10x 20.0000 deg
+energy drift: Earth 7.71e-16, 10x 3.31e-13
+video-time mapping: release at 2.000 s, Earth ticks at 4.021, 6.043, 8.064, 10.086, 12.107, 14.129
+10x ticks at 2.639, 3.278, 3.918, 4.557, 5.196, 5.835, 6.475, 7.114, 7.753, 8.392, 9.032, 9.671, 10.310, 10.949, 11.589, 12.228, 12.867, 13.506, 14.146
+freeze / sync chord at 14.146 s video time (frame 849 at 60 fps)

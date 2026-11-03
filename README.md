@@ -31,3 +31,8 @@ Claude then follows `SKILL.md`: topic and facts, then script, then voice, then t
 
 ## License
 The code and docs are MIT (see `LICENSE`). The reference frames are included for style study only.
+
+## Episodes
+| Path | What it is |
+|---|---|
+| `episodes/simtheory-03-gravity/` | **SimTheory #03: What if gravity was 10× stronger?** A 30 s neon physics Short with two RK4-simulated nonlinear pendulums (1g vs 10g), real KaTeX formula and synthesized audio. Final MP4 in `out/`, upload text and measured numbers in `METADATA.md`. Rebuild with `./build.sh`. |
