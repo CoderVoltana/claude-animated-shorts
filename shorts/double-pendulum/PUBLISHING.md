@@ -22,5 +22,6 @@ Simulated with the exact equations of motion (RK4, energy conserved to 10⁻⁹ 
 | File | Video frame | Use |
 |---|---|---|
 | `thumb_C_number.png` | 16.9 s + text overlay | Recommended if custom thumbnail upload is available. Pairs with the recommended title. |
+| `thumb_D_chaos_clean.png` | 19.6 s, clean render (`CLEAN=1`) | Only the CHAOS title and the pendulums: no sublines, graph or legend. Needs custom upload, since this exact frame isn't in the video. |
 | `thumb_A_chaos.png` | 17.5 s | Best pick in the in-app frame selector: CHAOS title plus the burst. |
 | `thumb_B_tracked.png` | 19.6 s | Alternative frame: the 5 tracked pendulums and their starting angles. |

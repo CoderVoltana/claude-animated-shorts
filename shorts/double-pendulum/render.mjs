@@ -18,7 +18,10 @@ const server = http.createServer((req, res) => {
   fs.createReadStream(f).pipe(res);
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
-const URL_ = `http://127.0.0.1:${server.address().port}/render.html${process.env.VARIANT ? "?v=" + process.env.VARIANT : ""}`;
+const QS = new URLSearchParams();
+if (process.env.VARIANT) QS.set("v", process.env.VARIANT);
+if (process.env.CLEAN) QS.set("clean", "1");          // thumbnails: no HUD, no sublines
+const URL_ = `http://127.0.0.1:${server.address().port}/render.html${QS.size ? "?" + QS : ""}`;
 
 const [mode, outDir, a3, a4, a5] = process.argv.slice(2);
 fs.mkdirSync(outDir, { recursive: true });

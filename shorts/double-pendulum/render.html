@@ -24,6 +24,7 @@ const W = 1080, H = 1920, FPS = 60;
 //             frame), 0.5-1.0 s rewind to the start pose ("HOW DID THIS HAPPEN?"), then the
 //             story, which ends mid-chaos and loops back into frame 0.
 const COLD = new URLSearchParams(location.search).get("v") === "cold";
+const CLEAN = new URLSearchParams(location.search).has("clean");   // thumbnails: no HUD, no sublines
 const COLD_FLASH = 0.5, COLD_REW = 0.5, COLD_OFF = COLD_FLASH + COLD_REW;
 const T_REWIND = 22.2;       // physics runs forward until here (story time)
 const T_END = COLD ? T_REWIND + COLD_OFF : 24.0;   // video length (s)
@@ -655,8 +656,8 @@ function drawText(t) {
     const a = inOut(t, 17.05, 21.95, 0.12, 0.45);
     const sc = lerp(1.6, 1, easeOutBack((t - 17.05) / 0.5)) * (1 + 0.015 * (t - 17));
     txt("CHAOS", 540, TY - 10, { size: 196, weight: 900, alpha: a, scale: sc, ls: 18, grad: ["#00f0ff", "#4a8bff", "#a848ff", "#ff48be", "#ff961e"], glow: "rgba(150,90,255,0.85)", glowSize: 60 });
-    txt("Deterministic.", 540, TY + 120 + rise(t, 18.2), { size: 52, weight: 700, family: "'Inter'", alpha: inOut(t, 18.2, 21.95, 0.25, 0.45), color: "#8ff6ff", glow: "rgba(0,220,255,0.6)" });
-    txt("Yet unpredictable.", 540, TY + 186 + rise(t, 19.1), { size: 52, weight: 700, family: "'Inter'", alpha: inOut(t, 19.1, 21.95, 0.25, 0.45), color: "#ffb15c", glow: "rgba(255,140,30,0.6)" });
+    if (!CLEAN) txt("Deterministic.", 540, TY + 120 + rise(t, 18.2), { size: 52, weight: 700, family: "'Inter'", alpha: inOut(t, 18.2, 21.95, 0.25, 0.45), color: "#8ff6ff", glow: "rgba(0,220,255,0.6)" });
+    if (!CLEAN) txt("Yet unpredictable.", 540, TY + 186 + rise(t, 19.1), { size: 52, weight: 700, family: "'Inter'", alpha: inOut(t, 19.1, 21.95, 0.25, 0.45), color: "#ffb15c", glow: "rgba(255,140,30,0.6)" });
   }
 }
 
@@ -732,9 +733,7 @@ function renderFrame(n) {
     ctx.globalCompositeOperation = "source-over";
   }
   vignette();
-  drawInset(t, cam);
-  drawGraph(t);
-  drawLegend(t);
+  if (!CLEAN) { drawInset(t, cam); drawGraph(t); drawLegend(t); }
   drawText(t);
 }
 
