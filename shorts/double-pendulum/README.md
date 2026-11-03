@@ -8,13 +8,14 @@ It has a neon-on-black look and loops seamlessly.
 |---|---|---|
 | 0–2 s | Hook | Pendulum released from rest. "CAN YOU PREDICT THIS?" |
 | 2–6 s | The system | "THE DOUBLE PENDULUM": two arms, two hinges, only gravity, with θ₁/θ₂ angle overlays. "Zero randomness." |
-| 6–17 s | Build and suspense | "This isn't one pendulum." / "It's 1,000." Each starts 0.000000001° apart. A magnifier follows the tip (zoom ×10⁴ → ×1), and a live log-scale graph shows the spread growing. "Still moving as one…" / "…for now." Heartbeat and riser. |
-| 17–22 s | Reveal | Flash and shockwave. The ensemble bursts into a cyan → blue → purple → orange ribbon. "CHAOS. Deterministic. Yet unpredictable." |
-| 22.2–24 s | Loop | Time runs backward (the equations are time-reversible). The 1,000 reunite into one pendulum, and the last frame leads into frame 0. |
+| 6–17 s | Build and suspense | "This isn't one pendulum." / "It's 500." Each starts 0.000000001° apart. A magnifier follows the tip (zoom ×10⁴ → ×1), and a live log-scale graph shows the spread growing. "Still moving as one…" / "…for now." Heartbeat and riser. |
+| 17–22 s | Reveal | Flash and shockwave. The faint cyan → blue → purple ensemble bursts apart while 5 tracked members (orange, yellow, green, pink, white) trace bright paths on top. "CHAOS. Deterministic. Yet unpredictable." A legend gives each tracked member's starting θ₂. |
+| 22.2–24 s | Loop | Time runs backward (the equations are time-reversible). The 500 reunite into one pendulum, and the last frame leads into frame 0. |
 
 ## Science
 - `sim.py` integrates the exact equations of motion for two point masses (1 kg) on massless rigid 1 m rods with frictionless hinges and g = 9.81 m/s². It uses classical RK4 in float64 with h = 1/2400 s.
-- Start: θ₁ = 140°, θ₂ = 175° + i · 10⁻⁹° for i = 0…999, both at rest. Energy drift over the run is about 3·10⁻⁹ J.
+- Start: θ₁ = 140°, θ₂ = 175° + i · 10⁻⁹° for i = 0…499, both at rest.
+- Tracked members 50, 150, 250, 350 and 450 (θ₂ = 175.00000005° … 175.00000045°) are five different initial conditions under the same equations. They're drawn last, with thicker, brighter trails. Energy drift over the run is about 3·10⁻⁹ J.
 - Everything shown is real output:
   - The motion, the separation, and the graph (spread of θ₂ across the ensemble).
   - The zoom factor (the magnification needed to see the tips apart).

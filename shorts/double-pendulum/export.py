@@ -1,4 +1,4 @@
-"""Run the 1,000-pendulum ensemble and export it for render.html.
+"""Run the 500-pendulum ensemble and export it for render.html.
 
 sim.json : metadata + spread curves (60 Hz)
 sim.bin  : float64 representative angles [S][2]  followed by
@@ -7,8 +7,8 @@ sim.bin  : float64 representative angles [S][2]  followed by
 import json, numpy as np
 from sim import run, tip
 
-TH1, TH2, DELTA, N = 140.0, 175.0, 1e-9, 1000   # degrees
-T = 22.35; RATE = 240; REP = 500
+TH1, TH2, DELTA, N = 140.0, 175.0, 1e-9, 500    # degrees
+T = 22.35; RATE = 240; REP = 250
 
 out, drift = run(TH1, TH2, DELTA, N, T, rate=RATE, sub=10)   # h = 1/2400 s
 print("max energy drift (J):", drift)
