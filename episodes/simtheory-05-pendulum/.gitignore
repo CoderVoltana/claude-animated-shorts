@@ -1,0 +1,10 @@
+# large render outputs (delivered separately)
+out/*.mp4
+out/*.mkv
+out/*.wav
+out/*.log
+out/x264_*
+data/sim.npz
+data/frame_log.json
+stills/f*.png
+__pycache__/
