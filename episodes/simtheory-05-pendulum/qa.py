@@ -92,7 +92,7 @@ def main():
     for t in (1.0, 3.0, 5.0):
         exact = gap_deg_mp(t)
         fi = int(round((TL.REPLAY_A + t / TL.REPLAY_RATE) * 60))
-        fi = min(fi, int(TL.REPLAY_B * 60) - 1)
+        fi = min(fi, int(round(TL.REPLAY_B * 60)))
         spot[str(t)] = dict(formula_deg=mp.nstr(exact, 8), frame=fi, shown=by_frame[fi].get("readout"),
                             shown_clock=by_frame[fi].get("clock"))
     last = max(lg["frame"] for lg in flog if "readout" in lg)
@@ -226,8 +226,9 @@ def write_log(meas, R):
     for k, v in R["gap_spot_checks"].items():
         lab = f"{k} s" if k != "last_readout_frame" else f"{v['clock']:.2f} s (last readout frame)"
         L.append(f"| {lab} | {v['formula_deg']}° | {v['shown']} | {v['frame']} (clock {v['shown_clock'] if 'shown_clock' in v else v['clock']:.4f} s) |")
-    L += ["", "The replay clock runs 0 → 5 s over video 28–38 s (0.5×), so the last replay frame shows t = 4.99 s; the 5 s "
-          "value is the formula value. Final video frame (2519) is the loop pose (all pendulums at rest, readout hidden).", "",
+    L += ["", "The replay clock runs 0 → 5 s over video 28–38 s (0.5×); frame 2280 (video 38.000 s) shows t = 5.00 s. "
+          "From the next frame the readout runs on live time since the push. The final video frame (2519) is the loop pose "
+          "(all pendulums at rest, readout hidden); the last frame with a readout is listed above.", "",
           "## On-screen numbers vs log", "",
           f"- Gap readout frames checked: {R['readout_frames']}; mismatches vs independent 60-digit recomputation: {len(R['readout_mismatches'])}.",
           f"- Replay / live clock max error vs the time map: {R['readout_clock_max_err']:.1e} s.",

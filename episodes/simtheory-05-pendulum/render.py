@@ -463,7 +463,7 @@ class Renderer:
         # phase-portrait labels
         if plotinfo:
             rect, ms, pa = plotinfo
-            a = pa * (1 - ms)
+            a = pa * (1 - ms) * TL.plot_labels_alpha(tv)
             if a > 0:
                 f = F.f("reg", 44)
                 zx, zy = self.pmap(rect, 0.0, 0.0)

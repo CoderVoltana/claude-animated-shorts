@@ -74,8 +74,8 @@ def layers(tv):
         return [dict(t=(tv - REPLAY_A) * REPLAY_RATE, w=1.0, rate=REPLAY_RATE, mode="replay", thr=True, thr_w=1.0)]
     if tv < 38.4:                                      # dimmed others cross-fade replay -> live; threshold switches at 38.0
         s = smooth((tv - 37.6) / 0.8)
-        return [dict(t=(tv - REPLAY_A) * REPLAY_RATE, w=1 - s, rate=REPLAY_RATE, mode="replay", thr=tv < REPLAY_B, thr_w=1.0),
-                dict(t=tv - T_PUSH, w=s, rate=1.0, mode="live", thr=tv >= REPLAY_B, thr_w=1.0)]
+        return [dict(t=(tv - REPLAY_A) * REPLAY_RATE, w=1 - s, rate=REPLAY_RATE, mode="replay", thr=tv <= REPLAY_B + 1e-9, thr_w=1.0),
+                dict(t=tv - T_PUSH, w=s, rate=1.0, mode="live", thr=tv > REPLAY_B + 1e-9, thr_w=1.0)]
     if tv < REW_A:
         return [dict(t=tv - T_PUSH, w=1.0, rate=1.0, mode="live", thr=True, thr_w=1.0)]
     # rewind
@@ -87,9 +87,9 @@ def layers(tv):
 
 def readout_clock(tv):
     """(label, clock_seconds) for the gap readout, or None when the readout is hidden."""
-    if REPLAY_A <= tv < REPLAY_B:
-        return "replay", (tv - REPLAY_A) * REPLAY_RATE
-    if REPLAY_B <= tv < REW_A + 0.35:
+    if REPLAY_A <= tv <= REPLAY_B + 0.05:            # replay clock ends on t = 5.00 s (held while its label fades)
+        return "replay", min((tv - REPLAY_A) * REPLAY_RATE, 5.0)
+    if REPLAY_B + 0.05 < tv < REW_A + 0.35:
         return "live", min(tv, REW_A) - T_PUSH
     return None
 
@@ -99,11 +99,11 @@ def readout_alpha(tv):
 
 
 def replay_label_alpha(tv):
-    return window(tv, 27.9, REPLAY_B, 0.3, 0.2)
+    return window(tv, 27.9, REPLAY_B + 0.05, 0.3, 0.05)
 
 
 def live_label_alpha(tv):
-    return window(tv, REPLAY_B, REW_A + 0.35, 0.2, 0.35)
+    return window(tv, REPLAY_B + 0.05, REW_A + 0.35, 0.2, 0.35)
 
 
 # ------------------------------------------------------------------ gap readout (computed DIRECTLY from delta)
@@ -209,6 +209,11 @@ def plot_rect(tv):
         return (cx + (x0 - cx) * sc, cy + (y0 - cy) * sc, cx + (x1 - cx) * sc, cy + (y1 - cy) * sc), 0.0
     s = smoother((tv - 27.5) / 0.7)
     return tuple(lerp(a, b, s) for a, b in zip(FULL_RECT, MINI_RECT)), s
+
+
+def plot_labels_alpha(tv):
+    """Axis labels appear once the pull-out has settled (keeps them inside the safe area)."""
+    return smooth((tv - 18.2) / 0.3)
 
 
 def plot_alpha(tv):
