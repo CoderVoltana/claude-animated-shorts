@@ -1,0 +1,7 @@
+# large / reproducible outputs (regenerate with the pipeline in README.md)
+out/*.mkv
+out/*.mp4
+out/*.wav
+out/*.log
+out/x264*
+__pycache__/
