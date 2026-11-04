@@ -1,0 +1,28 @@
+{
+ "integrated_lufs": -14.000000000000043,
+ "true_peak_dbtp": -1.5999969515872978,
+ "samples": 1632000,
+ "sr": 48000,
+ "bed_vs_fx_db": -9.0,
+ "start_abs_max": 7.147584130861745e-10,
+ "end_abs_max": 2.73695142498378e-07,
+ "cues": [
+  {
+   "cue": "split_left",
+   "video_t": 7.845
+  },
+  {
+   "cue": "split_right",
+   "video_t": 5.7408
+  },
+  {
+   "cue": "merge_chord",
+   "video_t": 20.94
+  },
+  {
+   "cue": "rewind_swoosh",
+   "video_t": 31.0,
+   "end": 33.85
+  }
+ ]
+}

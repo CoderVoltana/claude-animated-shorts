@@ -1,0 +1,118 @@
+{
+ "checks": {
+  "text_hud_inside_safe_area_all_frames": {
+   "pass": true,
+   "detail": {
+    "union_bbox_x0y0x1y1": [
+     102,
+     399,
+     1139,
+     1659
+    ],
+    "violations": []
+   }
+  },
+  "onscreen_numbers_match_measurement_log": {
+   "pass": true,
+   "detail": {
+    "mismatches": [],
+    "offset_caption": true
+   }
+  },
+  "first_last_rendered_frames_identical": {
+   "pass": true,
+   "detail": {
+    "max_abs_diff": 0
+   }
+  },
+  "first_last_decoded_frames_match_main": {
+   "pass": true,
+   "detail": {
+    "psnr_db": 68.46,
+    "max_abs_diff": 5
+   }
+  },
+  "first_last_decoded_frames_match_instagram": {
+   "pass": true,
+   "detail": {
+    "psnr_db": 67.46,
+    "max_abs_diff": 4
+   }
+  },
+  "stream_specs_main": {
+   "pass": true,
+   "detail": {
+    "res": "1440x2560",
+    "fps": "60/1",
+    "frames": "2040",
+    "profile": "High",
+    "pix_fmt": "yuv420p",
+    "duration_s": 34.0,
+    "video_mbps": 49.85,
+    "audio_kbps": 318,
+    "audio_sr": "48000",
+    "size_mb": 213.3
+   }
+  },
+  "loudness_main": {
+   "pass": true,
+   "detail": {
+    "ebur128_integrated_lufs": -14.0,
+    "ebur128_true_peak_dbtp": -1.6,
+    "loudnorm_input_i": -14.11,
+    "loudnorm_input_tp": -1.58
+   }
+  },
+  "stream_specs_instagram": {
+   "pass": true,
+   "detail": {
+    "res": "1080x1920",
+    "fps": "60/1",
+    "frames": "2040",
+    "profile": "High",
+    "pix_fmt": "yuv420p",
+    "duration_s": 34.0,
+    "video_mbps": 29.91,
+    "audio_kbps": 318,
+    "audio_sr": "48000",
+    "size_mb": 128.5
+   }
+  },
+  "loudness_instagram": {
+   "pass": true,
+   "detail": {
+    "ebur128_integrated_lufs": -14.0,
+    "ebur128_true_peak_dbtp": -1.6,
+    "loudnorm_input_i": -14.11,
+    "loudnorm_input_tp": -1.58
+   }
+  }
+ },
+ "readouts_shown": [
+  [
+   "Energy left: 100%",
+   "Energy left: 0%"
+  ]
+ ],
+ "speed_labels_shown": [
+  "1×",
+  "REWIND",
+  "TIME-LAPSE 1.1×",
+  "...",
+  "TIME-LAPSE 7.3×",
+  "TIME-LAPSE 7.4×",
+  "TIME-LAPSE 7.5×"
+ ],
+ "loudness_main": {
+  "ebur128_integrated_lufs": -14.0,
+  "ebur128_true_peak_dbtp": -1.6,
+  "loudnorm_input_i": -14.11,
+  "loudnorm_input_tp": -1.58
+ },
+ "loudness_instagram": {
+  "ebur128_integrated_lufs": -14.0,
+  "ebur128_true_peak_dbtp": -1.6,
+  "loudnorm_input_i": -14.11,
+  "loudnorm_input_tp": -1.58
+ }
+}

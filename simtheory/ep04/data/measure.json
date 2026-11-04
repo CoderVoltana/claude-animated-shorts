@@ -1,0 +1,105 @@
+{
+ "split20_right_sim": 5.810833333333334,
+ "split20_left_sim": 7.739166666666667,
+ "split_vis_right_sim": 5.240833333333334,
+ "split_vis_left_sim": 7.345000000000001,
+ "last_flip_right_sim": 9.689166666666667,
+ "remerge_right_sim": 75.6375,
+ "rest_right_sim": 78.735,
+ "split20_right_video": 6.3108,
+ "split20_left_video": 8.2392,
+ "split_vis_right_video": 5.7408,
+ "split_vis_left_video": 7.845,
+ "last_flip_right_video": 10.1892,
+ "remerge_right_video": 21.0,
+ "rest_right_video": 21.4137,
+ "dt_s": 0.0008333333333333334,
+ "integrator": "RK4 float64",
+ "theta0_deg": 120.0,
+ "twin_offset_deg": 0.002,
+ "friction_model": "per joint torque = -c*w_rel - mu*tanh(w_rel/w0); joint1 w_rel = w1, joint2 w_rel = w2 - w1",
+ "c_viscous_Nms": 0.03,
+ "mu_dry_Nm": 0.2,
+ "w0_rad_s": 0.05,
+ "rmax_timelapse": 7.4868,
+ "sim_end_s": 108.3416,
+ "E0_J": 14.714999999999996,
+ "E_rest_J": -29.43,
+ "E_available_J": 44.144999999999996,
+ "max_energy_drift_left_rel_E0": 7.73265553520679e-09,
+ "max_energy_drift_left_rel_available": 2.5776211050981974e-09,
+ "max_energy_rise_right_rel_per_step": 1.6095656037152571e-16,
+ "final_sep_left_deg": 163.22418812394972,
+ "final_sep_left_bottom_deg": 163.22418812394972,
+ "final_sep_right_deg": 4.789454237652535e-06,
+ "final_right_angles_deg": [
+  -4.58640150213796e-06,
+  -6.4861511646086e-06,
+  -1.1997466629054543e-06,
+  -1.696696926956065e-06
+ ],
+ "final_right_max_speed_deg_s": 6.765755081411477e-06,
+ "final_energy_left_pct": [
+  99.99999981856023,
+  99.99999976788038
+ ],
+ "final_energy_right_pct": [
+  3.460566047987803e-13,
+  1.6095439788232038e-14
+ ],
+ "flips_left": [
+  61,
+  55
+ ],
+ "flips_right": [
+  3,
+  3
+ ],
+ "flip_events_right": {
+  "A": [
+   [
+    2.9250000000000003,
+    2,
+    1
+   ],
+   [
+    5.158333333333334,
+    2,
+    1
+   ],
+   [
+    5.388333333333334,
+    2,
+    -1
+   ]
+  ],
+  "B": [
+   [
+    2.9250000000000003,
+    2,
+    1
+   ],
+   [
+    8.355,
+    2,
+    1
+   ],
+   [
+    9.689166666666667,
+    2,
+    1
+   ]
+  ]
+ },
+ "checks": {
+  "no_friction_energy_drift_lt_0.1pct": true,
+  "friction_energy_never_increases_lt_1e-9_per_step": true,
+  "friction_twins_final_sep_lt_0.1deg": true,
+  "friction_twins_hanging_down_lt_0.1deg": true,
+  "split_right_gt20_by_8s": true,
+  "split_left_gt20_by_9s": true,
+  "flips_stop_10_12s": true,
+  "remerge_20_22s": true,
+  "rest_by_24s": true
+ }
+}

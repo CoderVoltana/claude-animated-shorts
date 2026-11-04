@@ -1,0 +1,3 @@
+*.mp4
+out/x264_2pass*
+__pycache__/
