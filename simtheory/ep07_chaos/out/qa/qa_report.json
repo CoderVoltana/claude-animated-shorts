@@ -1,0 +1,186 @@
+{
+  "main": {
+    "width": 1440,
+    "height": 2560,
+    "fps": "60/1",
+    "frames": 2160,
+    "video_duration_s": 36.0,
+    "container_duration_s": 36.0,
+    "codec": "h264",
+    "profile": "High",
+    "pix_fmt": "yuv420p",
+    "video_mbps": 49.86,
+    "audio_codec": "aac",
+    "audio_sr": 48000,
+    "audio_kbps": 284.6,
+    "audio_duration_s": 36.0,
+    "faststart": true,
+    "size_mb": 225.7,
+    "loudness": {
+      "integrated_lufs": -14.0,
+      "true_peak_dbtp": -5.0,
+      "lra_lu": 9.5
+    }
+  },
+  "instagram": {
+    "width": 1080,
+    "height": 1920,
+    "fps": "60/1",
+    "frames": 2160,
+    "video_duration_s": 36.0,
+    "container_duration_s": 36.0,
+    "codec": "h264",
+    "profile": "High",
+    "pix_fmt": "yuv420p",
+    "video_mbps": 39.89,
+    "audio_codec": "aac",
+    "audio_sr": 48000,
+    "audio_kbps": 284.6,
+    "audio_duration_s": 36.0,
+    "faststart": true,
+    "size_mb": 180.8,
+    "loudness": {
+      "integrated_lufs": -14.0,
+      "true_peak_dbtp": -5.0,
+      "lra_lu": 9.5
+    }
+  },
+  "loop": {
+    "rendered_png_identical": true,
+    "encoded_max_abs_diff": 6,
+    "encoded_mean_abs_diff": 0.006005859375,
+    "encoded_psnr_db": 67.81235214953385
+  },
+  "motion": {
+    "longest_identical_run_frames": 0,
+    "identical_frame_pairs": 0,
+    "first_changed_frame": 1,
+    "release_frame": 30,
+    "max_mean_frame_diff": 2.4296383101851853
+  },
+  "safe_area_violations": 0,
+  "key_stills": {
+    "1_hook": 0.0,
+    "2_legend": 1.6,
+    "3_first_split": 8.858,
+    "4_second_split": 19.145,
+    "5_chart_points": 25.55,
+    "6_fitted_line": 27.2,
+    "7_real_world": 31.2,
+    "8_final_frame": 35.983
+  },
+  "numbers": {
+    "7-digit horizon (caption)": {
+      "shown": 9.7,
+      "measured": 9.696,
+      "ok": true
+    },
+    "16-digit horizon (caption)": {
+      "shown": 23.1,
+      "measured": 23.069,
+      "ok": true
+    },
+    "digits for 60 s (caption)": {
+      "shown": 40.0,
+      "measured": 40.39138409610383,
+      "ok": true
+    },
+    "slope label s/digit": {
+      "shown": 1.5,
+      "measured": 1.5091688466111768,
+      "ok": true
+    },
+    "HUD speed": {
+      "shown": 1.3,
+      "measured": 1.3,
+      "ok": true
+    },
+    "chart point 7 digits": {
+      "shown": 9.7,
+      "measured": 9.696,
+      "ok": true
+    },
+    "chart point 16 digits": {
+      "shown": 23.1,
+      "measured": 23.069,
+      "ok": true
+    },
+    "chart point 24 digits": {
+      "shown": 35.6,
+      "measured": 35.616,
+      "ok": true
+    },
+    "chart point 32 digits": {
+      "shown": 46.6,
+      "measured": 46.622,
+      "ok": true
+    },
+    "chart point 40 digits": {
+      "shown": 59.8,
+      "measured": 59.801,
+      "ok": true
+    }
+  },
+  "captions": [
+    {
+      "text": "Same physics. Same start. Same code.",
+      "words": 6,
+      "start": 2.5,
+      "end": 4.9,
+      "dur": 2.4,
+      "ok": true
+    },
+    {
+      "text": "Only difference: digits the computer keeps.",
+      "words": 6,
+      "start": 4.9,
+      "end": 7.88,
+      "dur": 2.98,
+      "ok": true
+    },
+    {
+      "text": "7 digits: wrong after 9.7 seconds.",
+      "words": 6,
+      "start": 8.01,
+      "end": 13.0,
+      "dur": 4.99,
+      "ok": true
+    },
+    {
+      "text": "16 digits: wrong after 23.1 seconds.",
+      "words": 6,
+      "start": 18.3,
+      "end": 21.0,
+      "dur": 2.7,
+      "ok": true
+    },
+    {
+      "text": "Every extra digit buys the same small slice.",
+      "words": 8,
+      "start": 21.5,
+      "end": 25.5,
+      "dur": 4.0,
+      "ok": true
+    },
+    {
+      "text": "To predict 1 minute ahead: ~40 digits.",
+      "words": 7,
+      "start": 25.5,
+      "end": 29.0,
+      "dur": 3.5,
+      "ok": true
+    },
+    {
+      "text": "Real measurements are far less precise.",
+      "words": 6,
+      "start": 29.0,
+      "end": 33.0,
+      "dur": 4.0,
+      "ok": true
+    }
+  ],
+  "hook": {
+    "text": "Can a computer predict chaos?",
+    "words": 5
+  }
+}

@@ -1,0 +1,10 @@
+# large generated files (rebuild with the pipeline in README.md)
+data/*.npy
+data/*.gz
+out/frames/
+out/audio/*.wav
+out/delivery/*.mp4
+out/*.jpg
+out/*.png
+out/stills/
+__pycache__/
