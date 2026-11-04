@@ -38,22 +38,22 @@ Energy-drift limit is 1e-4 (0.01 %); phase-curve limit is 5e-3 (0.5 %). Phase-cu
 |---|---|---|---|
 | 1.0 s | 9.9921069° | Gap to top: 9.99° | 1800 (clock 1.0000 s) |
 | 3.0 s | 0.019029697° | Gap to top: 0.019° | 2040 (clock 3.0000 s) |
-| 5.0 s | 3.6218575e-5° | Gap to top: 3.7 × 10⁻⁵ ° | 2279 (clock 4.9917 s) |
+| 5.0 s | 3.6218575e-5° | Gap to top: 3.6 × 10⁻⁵ ° | 2280 (clock 5.0000 s) |
 | 39.50 s (last readout frame) | 4.2687201e-52° | Gap to top: 4.3 × 10⁻⁵² ° | 2420 (clock 39.5000 s) |
 
-The replay clock runs 0 → 5 s over video 28–38 s (0.5×), so the last replay frame shows t = 4.99 s; the 5 s value is the formula value. Final video frame (2519) is the loop pose (all pendulums at rest, readout hidden).
+The replay clock runs 0 → 5 s over video 28–38 s (0.5×); frame 2280 (video 38.000 s) shows t = 5.00 s. From the next frame the readout runs on live time since the push. The final video frame (2519) is the loop pose (all pendulums at rest, readout hidden); the last frame with a readout is listed above.
 
 ## On-screen numbers vs log
 
 - Gap readout frames checked: 746; mismatches vs independent 60-digit recomputation: 0.
 - Replay / live clock max error vs the time map: 0.0e+00 s.
-- Text items checked: 13516; outside the safe area: 10; smallest font: 44.0 px.
+- Text items checked: 13448; outside the safe area: 0; smallest font: 44.0 px.
 - Captions ≤ 8 words and ≥ 1.5 s, hook ≤ 6 words: True.
 
 ## Video / audio
 
-- main: 1440×2560, 60/1 fps, 2520 frames, 42.000 s, h264 High yuv420p 49.59 Mbps, aac 48000 Hz 2ch 280 kbps; -14.0 LUFS, true peak -1.6 dBTP (loudnorm: -14.14 LUFS / -1.58 dBTP); faststart: True; 261.9 MB.
+- main: 1440×2560, 60/1 fps, 2520 frames, 42.000 s, h264 High yuv420p 49.6 Mbps, aac 48000 Hz 2ch 280 kbps; -14.0 LUFS, true peak -1.6 dBTP (loudnorm: -14.14 LUFS / -1.58 dBTP); faststart: True; 261.9 MB.
 - instagram: 1080×1920, 60/1 fps, 2520 frames, 42.000 s, h264 High yuv420p 29.76 Mbps, aac 48000 Hz 2ch 280 kbps; -14.0 LUFS, true peak -1.6 dBTP (loudnorm: -14.14 LUFS / -1.58 dBTP); faststart: True; 157.8 MB.
-- First vs last frame: lossless master identical = True; MP4 PSNR = 69.33031759619949 dB, max abs diff = 5.
+- First vs last frame: lossless master identical = True; MP4 PSNR = 69.03087861194703 dB, max abs diff = 5.
 - Longest completely still stretch (loop-wrapped): 49 frames = 0.82 s (the hook hold across the loop seam).
 

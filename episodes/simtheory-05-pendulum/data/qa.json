@@ -18,9 +18,9 @@
     },
     "5.0": {
       "formula_deg": "3.6218575e-5",
-      "frame": 2279,
-      "shown": "Gap to top: 3.7 \u00d7 10\u207b\u2075 \u00b0",
-      "shown_clock": 4.991666666666667
+      "frame": 2280,
+      "shown": "Gap to top: 3.6 \u00d7 10\u207b\u2075 \u00b0",
+      "shown_clock": 5.0
     },
     "last_readout_frame": {
       "frame": 2420,
@@ -29,109 +29,8 @@
       "formula_deg": "4.2687201e-52"
     }
   },
-  "text_items_checked": 13516,
-  "text_outside_safe_area": [
-    [
-      1060,
-      "angle",
-      [
-        1058.5,
-        1235.7,
-        1170.5,
-        1277.7
-      ]
-    ],
-    [
-      1061,
-      "angle",
-      [
-        1057.8,
-        1235.6,
-        1169.8,
-        1277.6
-      ]
-    ],
-    [
-      1062,
-      "angle",
-      [
-        1057.1,
-        1235.6,
-        1169.1,
-        1277.6
-      ]
-    ],
-    [
-      1063,
-      "angle",
-      [
-        1056.2,
-        1235.5,
-        1168.2,
-        1277.5
-      ]
-    ],
-    [
-      1064,
-      "angle",
-      [
-        1055.3,
-        1235.4,
-        1167.3,
-        1277.4
-      ]
-    ],
-    [
-      1065,
-      "angle",
-      [
-        1054.2,
-        1235.3,
-        1166.2,
-        1277.3
-      ]
-    ],
-    [
-      1066,
-      "angle",
-      [
-        1053.1,
-        1235.2,
-        1165.1,
-        1277.2
-      ]
-    ],
-    [
-      1067,
-      "angle",
-      [
-        1051.9,
-        1235.1,
-        1163.9,
-        1277.1
-      ]
-    ],
-    [
-      1068,
-      "angle",
-      [
-        1050.7,
-        1235.0,
-        1162.7,
-        1277.0
-      ]
-    ],
-    [
-      1069,
-      "angle",
-      [
-        1049.4,
-        1234.9,
-        1161.4,
-        1276.9
-      ]
-    ]
-  ],
+  "text_items_checked": 13448,
+  "text_outside_safe_area": [],
   "text_min_font_px": 44.0,
   "hook_words": 5,
   "captions": [
@@ -178,7 +77,7 @@
   ],
   "captions_ok": true,
   "master_first_last_identical": true,
-  "mp4_first_last_psnr_db": 69.33031759619949,
+  "mp4_first_last_psnr_db": 69.03087861194703,
   "mp4_first_last_max_abs_diff": 5,
   "master_frames": 2520,
   "longest_still_run_frames": 49,
@@ -194,7 +93,7 @@
     "video_codec": "h264",
     "profile": "High",
     "pix_fmt": "yuv420p",
-    "video_mbps": 49.59,
+    "video_mbps": 49.6,
     "audio": "aac 48000 Hz 2ch 280 kbps",
     "integrated_lufs_ebur128": -14.0,
     "true_peak_dbtp_ebur128": -1.6,
