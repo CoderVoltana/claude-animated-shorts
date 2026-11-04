@@ -39,7 +39,7 @@ w(f"- Upward reach (needed for layout): energy conservation limits both bobs to 
   ", ".join(f"{l} {p['max_bob2_height_above_pivot_m']:.2f} m" for l, p in P["pendulums"].items()) + ".\n")
 w("## Video and audio checks\n")
 m, ig = Q["main"], Q["instagram"]
-w(f"- Main: {m['width']}×{m['height']}, {m['fps']} fps, {m['frames']} frames, {m['duration_s']:.3f} s, {m['video_codec']} {m['profile']}, {m['pix_fmt']}, {m['video_kbps']/1000:.1f} Mbps video. Audio: {m['audio_codec']} {m['audio_hz']} Hz {m['audio_kbps']} kbps, {m['channels']} ch. Atom order: {' then '.join(m['faststart'])} (faststart).")
+w(f"- Main: {m['width']}×{m['height']}, {m['fps']} fps, {m['frames']} frames, {m['duration_s']:.3f} s, {m['video_codec']} {m['profile']}, {m['pix_fmt']}, {m['video_kbps']/1000:.1f} Mbps video. Audio: {m['audio_codec']} {m['audio_hz']} Hz, encoded at 320 kbps (ffmpeg native AAC, twoloop coder; measured average {m['audio_kbps']} kbps because the encoder does not spend the full budget on this soft material), {m['channels']} ch. Atom order: {' then '.join(m['faststart'])} (faststart).")
 w(f"- Instagram: {ig['width']}×{ig['height']}, {ig['fps']} fps, {ig['frames']} frames, {ig['video_kbps']/1000:.1f} Mbps.")
 w(f"- Loudness (ffmpeg ebur128, main MP4): **{m['ebur128_integrated_lufs']} LUFS integrated**, **{m['ebur128_true_peak_dbtp']} dBTP true peak**, LRA {m['ebur128_lra_lu']} LU. ffmpeg loudnorm measurement: I = {m['loudnorm_measured_I']} LUFS, TP = {m['loudnorm_measured_TP']} dBTP. Instagram copy: {ig['ebur128_integrated_lufs']} LUFS, {ig['ebur128_true_peak_dbtp']} dBTP.")
 w(f"- Effects vs bed: bed set {A['fx_vs_bed_db']} dB under the effects (BS.1770 integrated). High-pass 40 Hz (4th order), low-pass 12 kHz, −2 dB shelf above 6 kHz.")
@@ -63,7 +63,7 @@ Does Length Change Everything? 4 Double Pendulums
 ## Description
 Four double pendulums: same 2 m total length, same 90° start. Only the arm ratio changes, and each one paints a completely different light-drawing. SimTheory #06.
 Real physics: double-pendulum simulation with unequal arms, no tricks. Chaos times measured, not guessed.
-Result: {rk[0]} became unpredictable first ({TL.fmt_chaos(P['pendulums'][rk[0]]['chaos_clock_s'])}), while {rk[-1]} stayed predictable ({TL.fmt_chaos(P['pendulums'][rk[-1]]['chaos_clock_s'])}).
+Result: {rk[0]} became unpredictable first, after {TL.fmt_chaos(P['pendulums'][rk[0]]['chaos_clock_s'])}. {rk[-1]} never lost predictability within 60 s.
 
 ## Hashtags
 #physics #chaostheory #doublependulum #simulation #science
